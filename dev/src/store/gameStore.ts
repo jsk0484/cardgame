@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import type { GameState, Card, HandType, Player } from '../types';
 import type { ChallengeResult } from '../types';
-import { buildDeck, dealHands, shuffle } from '../game/deck';
+import { buildDeck, dealHands } from '../game/deck';
 import {
   buildPlayedHand,
   shouldEndRound,
@@ -13,7 +13,7 @@ import {
   MAX_PASS_STREAK,
   getWinner,
 } from '../game/gameLogic';
-import { applyChallengeScores } from '../game/scoring';
+import { applyChallengeScores, calcRoundScore } from '../game/scoring';
 import { aiChooseDrawSource, aiChoosePlay, aiShouldChallenge } from '../game/ai';
 
 function makePlayer(id: string, nickname: string): Player {
@@ -121,9 +121,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
       newDiscardPile = newDiscardPile.slice(0, -1);
     } else {
       if (newDrawPile.length === 0) {
-        if (newDiscardPile.length === 0) return;
-        newDrawPile = shuffle([...newDiscardPile]);
-        newDiscardPile = [];
+        set({ message: 'Draw pile empty! Round over.' });
+        get()._endRound();
+        return;
       }
       card = newDrawPile[newDrawPile.length - 1];
       newDrawPile = newDrawPile.slice(0, -1);
@@ -178,6 +178,36 @@ export const useGameStore = create<GameStore>((set, get) => ({
     human.passStreak = 0;
     players[HUMAN_IDX] = human;
 
+    // Handle special card effects
+    const hasHandoof = playedCards.some(c => c.rank === 'handoof');
+    const hasNullify = playedCards.some(c => c.rank === 'nullify');
+    const hasBlackJoker = playedCards.some(c => c.rank === 'black_joker');
+
+    if (hasHandoof) {
+      // Swap hands with AI
+      const tempHand = [...players[AI_IDX].hand];
+      const newAi = { ...players[AI_IDX], hand: human.hand, handCount: human.hand.length };
+      const newHuman = { ...human, hand: tempHand, handCount: tempHand.length };
+      players[HUMAN_IDX] = newHuman;
+      players[AI_IDX] = newAi;
+      // Update human reference for shouldEndRound check
+      human.hand = tempHand;
+    }
+
+    if (hasNullify && state.lastPlay) {
+      // Invalidate lastPlay: put those cards at bottom of draw pile
+      // We'll handle this in the set call below
+    }
+
+    if (hasBlackJoker && players[AI_IDX].hand.length > 0) {
+      // Steal 1 random card from AI
+      const aiHandCopy = [...players[AI_IDX].hand];
+      const stealIdx = Math.floor(Math.random() * aiHandCopy.length);
+      const stolenCard = aiHandCopy.splice(stealIdx, 1)[0];
+      players[AI_IDX] = { ...players[AI_IDX], hand: aiHandCopy, handCount: aiHandCopy.length };
+      players[HUMAN_IDX] = { ...players[HUMAN_IDX], hand: [...players[HUMAN_IDX].hand, stolenCard], handCount: players[HUMAN_IDX].hand.length + 1 };
+    }
+
     const newDiscardPile = [...state.discardPile, ...playedCards];
     const roundEnded = shouldEndRound(human.hand, state.drawPile);
 
@@ -191,6 +221,22 @@ export const useGameStore = create<GameStore>((set, get) => ({
         message: `${human.nickname} played their last card(s)! Round over.`,
       });
       setTimeout(() => get()._endRound(), 1000);
+      return;
+    }
+
+    if (hasNullify) {
+      const nullifiedCards = state.lastPlay ? state.lastPlay.cards : [];
+      set({
+        players,
+        discardPile: newDiscardPile,
+        lastPlay: null,
+        drawPile: [...state.drawPile, ...nullifiedCards],
+        selectedCards: [],
+        phase: 'draw',
+        timer: PLAY_TIMER,
+        message: 'Nullify! Previous play is cancelled.',
+      });
+      get()._nextTurn();
       return;
     }
 
@@ -288,12 +334,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
       newDiscardPile = newDiscardPile.slice(0, -1);
     } else {
       if (newDrawPile.length === 0) {
-        if (newDiscardPile.length === 0) {
-          get()._endRound();
-          return;
-        }
-        newDrawPile = shuffle([...newDiscardPile]);
-        newDiscardPile = [];
+        get()._endRound();
+        return;
       }
       card = newDrawPile[newDrawPile.length - 1];
       newDrawPile = newDrawPile.slice(0, -1);
@@ -345,8 +387,27 @@ export const useGameStore = create<GameStore>((set, get) => ({
       updatedAi.passStreak = 0;
       updatedPlayers[AI_IDX] = updatedAi;
 
+      // Handle special card effects for AI
+      const aiHasBlackJoker = aiDecision.cards.some(c => c.rank === 'black_joker');
+      if (aiHasBlackJoker && updatedPlayers[HUMAN_IDX].hand.length > 0) {
+        const humanHandCopy = [...updatedPlayers[HUMAN_IDX].hand];
+        const stealIdx = Math.floor(Math.random() * humanHandCopy.length);
+        humanHandCopy.splice(stealIdx, 1); // AI steals, card is removed from human
+        updatedPlayers[HUMAN_IDX] = { ...updatedPlayers[HUMAN_IDX], hand: humanHandCopy, handCount: humanHandCopy.length };
+      }
+
+      const aiHasHandoof = aiDecision.cards.some(c => c.rank === 'handoof');
+      if (aiHasHandoof) {
+        const humanHand = [...updatedPlayers[HUMAN_IDX].hand];
+        const aiHandAfterPlay = [...updatedPlayers[AI_IDX].hand];
+        updatedPlayers[HUMAN_IDX] = { ...updatedPlayers[HUMAN_IDX], hand: aiHandAfterPlay, handCount: aiHandAfterPlay.length };
+        updatedPlayers[AI_IDX] = { ...updatedPlayers[AI_IDX], hand: humanHand, handCount: humanHand.length };
+      }
+
+      const aiHasNullify = aiDecision.cards.some(c => c.rank === 'nullify');
+
       const newDiscard = [...s.discardPile, ...aiDecision.cards];
-      const roundEnded = shouldEndRound(updatedAi.hand, s.drawPile);
+      const roundEnded = shouldEndRound(updatedPlayers[AI_IDX].hand, s.drawPile);
 
       if (roundEnded) {
         set({
@@ -357,6 +418,21 @@ export const useGameStore = create<GameStore>((set, get) => ({
           message: 'AI played their last card(s)! Round over.',
         });
         setTimeout(() => get()._endRound(), 1000);
+        return;
+      }
+
+      if (aiHasNullify) {
+        const nullifiedCards = s.lastPlay ? s.lastPlay.cards : [];
+        set({
+          players: updatedPlayers,
+          discardPile: newDiscard,
+          lastPlay: null,
+          drawPile: [...s.drawPile, ...nullifiedCards],
+          phase: 'draw',
+          timer: PLAY_TIMER,
+          message: 'AI played Nullify! Previous play is cancelled.',
+        });
+        get()._nextTurn();
         return;
       }
 
@@ -444,12 +520,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
     const state = get();
 
     const players = state.players.map(p => {
-      const handoutBonus = p.hand.length === 0 ? 10 : 0;
-      const remainingPenalty = p.hand.reduce((sum, c) => {
-        const val = typeof c.rank === 'number' ? c.rank : 5;
-        return sum - Math.floor(val / 5);
-      }, 0);
-      return { ...p, score: p.score + handoutBonus + remainingPenalty };
+      const isHandout = p.hand.length === 0;
+      const roundScore = calcRoundScore(p.hand, isHandout);
+      return { ...p, score: p.score + roundScore };
     });
 
     const winner = players.reduce((a, b) => a.score > b.score ? a : b);

@@ -16,8 +16,9 @@ export function buildPlayedHand(
   cards: Card[],
   declaredType: HandType
 ): PlayedHand {
+  const hasRedJoker = cards.some(c => c.rank === 'red_joker');
   const actualType = determineActualHandType(cards);
-  const isBluff = declaredType !== actualType;
+  const isBluff = hasRedJoker ? false : declaredType !== actualType;
   return { playerId, cards, declaredType, actualType, isBluff };
 }
 
