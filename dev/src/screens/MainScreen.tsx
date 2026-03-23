@@ -4,7 +4,11 @@ import { useLangStore } from '../store/langStore';
 import LangToggle from '../components/LangToggle';
 import './MainScreen.css';
 
-const MainScreen: React.FC = () => {
+interface MainScreenProps {
+  onMultiplayer?: () => void;
+}
+
+const MainScreen: React.FC<MainScreenProps> = ({ onMultiplayer }) => {
   const [nickname, setNickname] = useState('');
   const setNicknameStore = useGameStore(s => s.setNickname);
   const startGame = useGameStore(s => s.startGame);
@@ -69,6 +73,11 @@ const MainScreen: React.FC = () => {
           <button className="btn btn-primary btn-large" onClick={handleStart}>
             {t.play_vs_ai}
           </button>
+          {onMultiplayer && (
+            <button className="btn btn-multiplayer btn-large" onClick={onMultiplayer}>
+              Multiplayer
+            </button>
+          )}
         </div>
 
         <p className="main-version">{t.deck_info}</p>

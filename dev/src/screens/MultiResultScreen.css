@@ -1,0 +1,163 @@
+.mresult-screen {
+  min-height: 100vh;
+  background: radial-gradient(ellipse at center, #1e6b32 0%, #0d3d1a 70%, #071f0d 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.mresult-card {
+  background: rgba(255, 255, 255, 0.07);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 20px;
+  padding: 48px 52px;
+  max-width: 480px;
+  width: 100%;
+  text-align: center;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+}
+
+.mresult-trophy {
+  font-size: 4em;
+  margin-bottom: 12px;
+}
+
+.mresult-title {
+  font-size: 2em;
+  font-weight: 900;
+  color: #f0c040;
+  margin: 0 0 6px;
+  text-shadow: 0 2px 8px rgba(240, 192, 64, 0.3);
+}
+
+.mresult-subtitle {
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 0.78em;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  margin: 0 0 24px;
+}
+
+.mresult-scores {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.mresult-player {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 10px;
+  padding: 12px 18px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  transition: border-color 0.2s;
+}
+
+.mresult-winner {
+  background: rgba(240, 192, 64, 0.1);
+  border-color: rgba(240, 192, 64, 0.3);
+}
+
+.mresult-me {
+  border-color: rgba(80, 160, 255, 0.35);
+  background: rgba(80, 160, 255, 0.07);
+}
+
+.mresult-winner.mresult-me {
+  background: rgba(240, 192, 64, 0.15);
+  border-color: rgba(240, 192, 64, 0.5);
+}
+
+.mresult-rank {
+  font-size: 1.3em;
+  min-width: 28px;
+  text-align: center;
+}
+
+.mresult-player-info {
+  flex: 1;
+  text-align: left;
+}
+
+.mresult-player-name {
+  font-weight: 700;
+  color: white;
+  font-size: 1em;
+}
+
+.mresult-you-tag {
+  font-size: 0.72em;
+  color: #80c0ff;
+  font-weight: 400;
+}
+
+.mresult-player-score {
+  font-size: 1.5em;
+  font-weight: 900;
+  color: #f0c040;
+}
+
+.mresult-my-result {
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.88em;
+  margin-bottom: 24px;
+  font-style: italic;
+}
+
+.mresult-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.mresult-btn {
+  padding: 12px 32px;
+  border-radius: 10px;
+  border: none;
+  cursor: pointer;
+  font-size: 1em;
+  font-weight: 700;
+  transition: all 0.15s ease;
+  letter-spacing: 0.04em;
+  width: 100%;
+}
+
+.mresult-btn-primary {
+  background: linear-gradient(135deg, #f0c040, #c8940a);
+  color: #1a1a00;
+}
+
+.mresult-btn-primary:hover {
+  background: linear-gradient(135deg, #f5cc55, #d4a020);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(240, 192, 64, 0.4);
+}
+
+.mresult-btn-secondary {
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.mresult-btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.17);
+}
+
+@media (max-width: 480px) {
+  .mresult-card {
+    padding: 28px 20px;
+  }
+
+  .mresult-title {
+    font-size: 1.6em;
+  }
+
+  .mresult-trophy {
+    font-size: 3em;
+  }
+}

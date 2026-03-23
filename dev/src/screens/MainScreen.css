@@ -179,3 +179,24 @@
   font-size: 1.05em;
   border-radius: 10px;
 }
+
+.btn-multiplayer {
+  background: linear-gradient(135deg, #3090e0, #1060b0);
+  color: white;
+}
+
+.btn-multiplayer:hover:not(:disabled) {
+  background: linear-gradient(135deg, #40a0f0, #2070c0);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(48, 144, 224, 0.4);
+}
+
+.btn-secondary {
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.18);
+}
