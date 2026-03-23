@@ -161,7 +161,7 @@ function startChallengePhase(room: GameRoom, playedHand: PlayedHand) {
   io.to(room.roomId).emit('cards_played', {
     playedHand: {
       playerId: playedHand.playerId,
-      cards: playedHand.cards,
+      cardCount: playedHand.cards.length,
       declaredType: playedHand.declaredType,
     },
   });
@@ -205,6 +205,7 @@ function resolveChallenge(room: GameRoom, challengerId: string) {
   io.to(room.roomId).emit('challenge_result', {
     success: challengeSuccess,
     actualType: lastPlay.actualType,
+    cards: lastPlay.cards,
     scoreDeltas,
   });
 
@@ -479,7 +480,7 @@ io.on('connection', socket => {
       setRoom(room);
       io.to(room.roomId).emit('cards_played', { playedHand: {
         playerId: playedHand.playerId,
-        cards: playedHand.cards,
+        cardCount: playedHand.cards.length,
         declaredType: playedHand.declaredType,
       }});
       nextTurn(room);
@@ -490,7 +491,7 @@ io.on('connection', socket => {
       setRoom(room);
       io.to(room.roomId).emit('cards_played', { playedHand: {
         playerId: playedHand.playerId,
-        cards: playedHand.cards,
+        cardCount: playedHand.cards.length,
         declaredType: playedHand.declaredType,
       }});
       setTimeout(() => endRound(room), 1000);

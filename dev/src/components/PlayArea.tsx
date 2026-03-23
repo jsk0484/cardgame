@@ -22,7 +22,6 @@ const PlayArea: React.FC<PlayAreaProps> = ({ lastPlay, playerName = 'Player', ai
           <div className="play-area-player">
             {lastPlay.playerId === 'human' ? playerName : aiName} declared:{' '}
             <span className="declared-type">{lastPlay.declaredType}</span>
-            {' '}· {lastPlay.cards.length} card(s)
           </div>
           {revealed ? (
             <div className="play-area-cards">
@@ -32,9 +31,7 @@ const PlayArea: React.FC<PlayAreaProps> = ({ lastPlay, playerName = 'Player', ai
             </div>
           ) : (
             <div className="play-area-hidden">
-              {lastPlay.cards.map((_, i) => (
-                <div key={i} className="card-back-small" />
-              ))}
+              <div className="card-back-unknown">?</div>
             </div>
           )}
         </div>

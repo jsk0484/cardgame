@@ -26,6 +26,21 @@ const SUIT_COLORS: Record<string, string> = {
   joker: 'purple',
 };
 
+const SPECIAL_COLORS: Record<string, string> = {
+  handoof: '#9c27b0',
+  nullify: '#00bcd4',
+  red_joker: '#ff5722',
+  black_joker: '#607d8b',
+};
+
+function getCardColor(card: CardType): string {
+  if (card.suit === 'joker' || card.isSpecial) {
+    const special = SPECIAL_COLORS[String(card.rank)];
+    if (special) return special;
+  }
+  return SUIT_COLORS[card.suit] || 'black';
+}
+
 function getRankDisplay(card: CardType): string {
   if (card.rank === 'red_joker') return 'RJ';
   if (card.rank === 'black_joker') return 'BJ';
@@ -52,7 +67,7 @@ const CardComponent: React.FC<CardProps> = ({ card, faceDown = false, selected =
     );
   }
 
-  const suitColor = SUIT_COLORS[card.suit] || 'black';
+  const suitColor = getCardColor(card);
   const rankDisplay = getRankDisplay(card);
   const suitSymbol = SUIT_SYMBOLS[card.suit] || '?';
 

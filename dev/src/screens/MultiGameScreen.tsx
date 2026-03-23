@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useMultiStore } from '../store/multiStore';
+import { useLangStore } from '../store/langStore';
 import Hand from '../components/Hand';
 import PlayArea from '../components/PlayArea';
 import EmojiBar from '../components/EmojiBar';
@@ -9,6 +10,7 @@ import './MultiGameScreen.css';
 const HAND_TYPES: HandType[] = ['single', 'flush', 'straight', 'triple', 'special'];
 
 const MultiGameScreen: React.FC = () => {
+  const t = useLangStore(s => s.t);
   const {
     players,
     myId,
@@ -33,13 +35,14 @@ const MultiGameScreen: React.FC = () => {
 
   const [selectedCards, setSelectedCards] = useState<string[]>([]);
   const [declaredType, setDeclaredType] = useState<HandType>('single');
+  const [declareOpen, setDeclareOpen] = useState(false);
 
   const me = players.find(p => p.id === myId);
   const opponents = players.filter(p => p.id !== myId);
 
   const isMyTurn = currentPlayerId === myId;
   const canDraw = isMyTurn && phase === 'draw';
-  const canPlay = isMyTurn && phase === 'play' && selectedCards.length > 0;
+  const canPlay = isMyTurn && phase === 'play' && selectedCards.length > 0 && declareOpen;
   const canPass = isMyTurn && phase === 'play';
 
   // Determine if it's my challenge turn
@@ -53,6 +56,11 @@ const MultiGameScreen: React.FC = () => {
     players[expectedChallengerIdx]?.id === myId;
 
   const timerWarning = timer <= 5 && timer > 0;
+
+  // 턴이 넘어와 play phase가 되면 선언 블록 초기화
+  React.useEffect(() => {
+    if (phase === 'play' && isMyTurn) setDeclareOpen(false);
+  }, [phase, isMyTurn]);
 
   const handleSelectCard = (cardId: string) => {
     if (phase !== 'play' || !isMyTurn) return;
@@ -79,8 +87,8 @@ const MultiGameScreen: React.FC = () => {
   const displayedLastPlay = lastPlay
     ? {
         playerId: lastPlay.playerId,
-        cards: lastPlay.cards,
-        declaredType: lastPlay.declaredType,
+        cards: lastPlay.cards ?? [],
+        declaredType: lastPlay.declaredType as HandType,
         actualType: lastPlay.declaredType as HandType,
         isBluff: false,
       }
@@ -92,7 +100,7 @@ const MultiGameScreen: React.FC = () => {
     <div className="multi-game-screen">
       {/* Header */}
       <div className="mg-header">
-        <div className="mg-round">Round {round} / 3</div>
+        <div className="mg-round">{t.round} {round} / 3</div>
         <div className="mg-scores">
           {players.map(p => (
             <div key={p.id} className={`mg-score-item${p.id === myId ? ' mg-score-me' : ''}`}>
@@ -104,7 +112,7 @@ const MultiGameScreen: React.FC = () => {
         <div className="mg-header-right">
           {(canDraw || isMyTurn) && (
             <div className={`mg-timer${timerWarning ? ' mg-timer-warning' : ''}`}>
-              {phase === 'challenge' ? 'Challenge' : phase === 'draw' ? 'Draw' : 'Play'}: {timer}s
+              {phase === 'challenge' ? t.timer_challenge : phase === 'draw' ? t.draw_pile : t.timer_play}: {timer}s
             </div>
           )}
           <button className="mg-leave-btn" onClick={disconnect}>Leave</button>
@@ -134,7 +142,7 @@ const MultiGameScreen: React.FC = () => {
               {opp.handCount === 0 && <span className="mg-empty-hand">No cards</span>}
             </div>
             <div className="mg-opp-stats">
-              Score: {opp.score} | Cards: {opp.handCount}
+              {t.score}: {opp.score} | {t.cards}: {opp.handCount}
             </div>
           </div>
         ))}
@@ -147,7 +155,7 @@ const MultiGameScreen: React.FC = () => {
           className={`mg-pile${canDraw ? ' mg-pile-clickable' : ''}`}
           onClick={() => handleDrawCard('draw')}
         >
-          <div className="mg-pile-label">Draw Pile</div>
+          <div className="mg-pile-label">{t.draw_pile}</div>
           <div className="mg-pile-visual">
             {drawPileCount > 0 ? (
               <>
@@ -167,7 +175,7 @@ const MultiGameScreen: React.FC = () => {
           className={`mg-pile${canDraw && topDiscardCard ? ' mg-pile-clickable' : ''}`}
           onClick={() => topDiscardCard && handleDrawCard('discard')}
         >
-          <div className="mg-pile-label">Discard</div>
+          <div className="mg-pile-label">{t.discard}</div>
           <div className="mg-pile-visual">
             {topDiscardCard ? (
               <div className={`mg-pile-top mg-pile-face${canDraw ? ' mg-pile-glow' : ''}`}>
@@ -216,7 +224,7 @@ const MultiGameScreen: React.FC = () => {
       <div className="mg-player-section">
         <div className="mg-player-label">
           {me?.nickname ?? 'Your'} Hand
-          {me && <span className="mg-player-stats"> — Score: {me.score} | Cards: {myHand.length}</span>}
+          {me && <span className="mg-player-stats"> — {t.score}: {me.score} | {t.cards}: {myHand.length}</span>}
         </div>
         <Hand
           cards={myHand}
@@ -231,16 +239,28 @@ const MultiGameScreen: React.FC = () => {
         {/* Hand type selector */}
         {isMyTurn && phase === 'play' && (
           <div className="mg-hand-type-selector">
-            <span className="mg-hand-type-label">Declare:</span>
-            {HAND_TYPES.map(ht => (
+            {!declareOpen ? (
               <button
-                key={ht}
-                className={`mg-btn-type${declaredType === ht ? ' mg-btn-type-active' : ''}`}
-                onClick={() => setDeclaredType(ht)}
+                className="mg-btn mg-btn-declare-open"
+                onClick={() => setDeclareOpen(true)}
+                disabled={selectedCards.length === 0}
               >
-                {ht}
+                {t.declare} ▾
               </button>
-            ))}
+            ) : (
+              <>
+                <span className="mg-hand-type-label">{t.declare}</span>
+                {HAND_TYPES.map(ht => (
+                  <button
+                    key={ht}
+                    className={`mg-btn-type${declaredType === ht ? ' mg-btn-type-active' : ''}`}
+                    onClick={() => setDeclaredType(ht)}
+                  >
+                    {t.hand_types[ht]}
+                  </button>
+                ))}
+              </>
+            )}
           </div>
         )}
 
@@ -252,16 +272,16 @@ const MultiGameScreen: React.FC = () => {
         {/* Action buttons */}
         <div className="mg-action-buttons">
           {canDraw && (
-            <div className="mg-draw-hint">Click the draw pile or discard pile to draw a card</div>
+            <div className="mg-draw-hint">{t.draw_hint}</div>
           )}
 
           {isMyTurn && phase === 'play' && (
             <>
               <button className="mg-btn mg-btn-play" onClick={handlePlayCards} disabled={!canPlay}>
-                Play ({selectedCards.length})
+                {t.play} ({selectedCards.length})
               </button>
               <button className="mg-btn mg-btn-pass" onClick={pass} disabled={!canPass}>
-                Pass ({me?.score ?? 0})
+                {t.pass} ({me?.passStreak ?? 0}/2)
               </button>
             </>
           )}
@@ -269,10 +289,10 @@ const MultiGameScreen: React.FC = () => {
           {canChallenge && (
             <>
               <button className="mg-btn mg-btn-challenge" onClick={challenge}>
-                Challenge!
+                {t.challenge}
               </button>
               <button className="mg-btn mg-btn-skip" onClick={skipChallenge}>
-                No Challenge
+                {t.no_challenge}
               </button>
             </>
           )}

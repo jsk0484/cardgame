@@ -9,7 +9,15 @@ export interface MultiPlayer {
   nickname: string;
   handCount: number;
   score: number;
+  passStreak: number;
   isConnected: boolean;
+}
+
+export interface MultiLastPlay {
+  playerId: string;
+  cardCount: number;
+  declaredType: string;
+  cards: Card[];
 }
 
 interface MultiState {
@@ -21,7 +29,7 @@ interface MultiState {
   myHand: Card[];
   drawPileCount: number;
   discardPile: Card[];
-  lastPlay: any | null;
+  lastPlay: MultiLastPlay | null;
   currentPlayerId: string | null;
   phase: string;
   timer: number;
@@ -71,6 +79,7 @@ export const useMultiStore = create<MultiState>((set, get) => {
           nickname: p.nickname,
           handCount: p.handCount,
           score: p.score,
+          passStreak: p.passStreak ?? 0,
           isConnected: p.isConnected,
         })),
         myHand: me?.hand?.length > 0 ? me.hand : s.myHand,
@@ -108,18 +117,29 @@ export const useMultiStore = create<MultiState>((set, get) => {
     });
 
     socket.on('cards_played', ({ playedHand }: any) => {
-      set({ lastPlay: playedHand });
+      set({
+        lastPlay: {
+          playerId: playedHand.playerId,
+          cardCount: playedHand.cardCount ?? playedHand.cards?.length ?? 0,
+          declaredType: playedHand.declaredType,
+          cards: playedHand.cards ?? [],
+        }
+      });
     });
 
-    socket.on('challenge_result', ({ success, actualType, scoreDeltas }: any) => {
+    socket.on('challenge_result', ({ success, actualType, scoreDeltas, cards }: any) => {
       const myId = socket.id;
       const delta = scoreDeltas[myId ?? ''] ?? 0;
       const deltaStr = delta > 0 ? `+${delta}` : `${delta}`;
-      set({
+      set(s => ({
+        lastPlay: s.lastPlay ? {
+          ...s.lastPlay,
+          cards: cards ?? s.lastPlay.cards,
+        } : null,
         message: success
           ? `Bluff caught! Actual type: ${actualType}. Score: ${deltaStr}`
           : `Bluff held! Actual type: ${actualType}. Score: ${deltaStr}`,
-      });
+      }));
     });
 
     socket.on('round_ended', () => {
