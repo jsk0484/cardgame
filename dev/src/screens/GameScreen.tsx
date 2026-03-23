@@ -136,6 +136,8 @@ const GameScreen: React.FC = () => {
             lastPlay={lastPlay}
             playerName={human.nickname}
             aiName={ai.nickname}
+            phase={phase}
+            challengeResult={challengeResult}
           />
         </div>
       </div>
