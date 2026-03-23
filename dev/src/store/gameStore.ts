@@ -392,8 +392,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
       if (aiHasBlackJoker && updatedPlayers[HUMAN_IDX].hand.length > 0) {
         const humanHandCopy = [...updatedPlayers[HUMAN_IDX].hand];
         const stealIdx = Math.floor(Math.random() * humanHandCopy.length);
-        humanHandCopy.splice(stealIdx, 1); // AI steals, card is removed from human
+        const stolenCard = humanHandCopy.splice(stealIdx, 1)[0];
         updatedPlayers[HUMAN_IDX] = { ...updatedPlayers[HUMAN_IDX], hand: humanHandCopy, handCount: humanHandCopy.length };
+        updatedPlayers[AI_IDX] = { ...updatedPlayers[AI_IDX], hand: [...updatedPlayers[AI_IDX].hand, stolenCard], handCount: updatedPlayers[AI_IDX].hand.length + 1 };
       }
 
       const aiHasHandoof = aiDecision.cards.some(c => c.rank === 'handoof');
