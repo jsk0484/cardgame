@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useGameStore } from '../store/gameStore';
 import { useLangStore } from '../store/langStore';
+import LangToggle from '../components/LangToggle';
 import './MainScreen.css';
 
 const MainScreen: React.FC = () => {
@@ -21,6 +22,9 @@ const MainScreen: React.FC = () => {
   return (
     <div className="main-screen">
       <div className="main-card">
+        <div className="main-top-bar">
+          <LangToggle />
+        </div>
         <div className="main-logo">
           <span className="logo-suit">♠</span>
           <span className="logo-title">HANDOOF</span>

@@ -1,9 +1,11 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useGameStore } from '../store/gameStore';
 import { useLangStore } from '../store/langStore';
 import Hand from '../components/Hand';
 import Pile from '../components/Pile';
 import PlayArea from '../components/PlayArea';
+import LangToggle from '../components/LangToggle';
+import RulesModal from '../components/RulesModal';
 import type { HandType } from '../types';
 import './GameScreen.css';
 
@@ -26,6 +28,7 @@ const GameScreen: React.FC = () => {
   const ai = players[1];
   const isHumanTurn = currentTurn === 0;
 
+  const [showRules, setShowRules] = useState(false);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
@@ -49,6 +52,8 @@ const GameScreen: React.FC = () => {
 
   return (
     <div className="game-screen">
+      {showRules && <RulesModal onClose={() => setShowRules(false)} />}
+
       {/* Header */}
       <div className="game-header">
         <div className="game-round">{t.round} {round} / 3</div>
@@ -63,11 +68,15 @@ const GameScreen: React.FC = () => {
             <span className="score-val">{ai.score}</span>
           </div>
         </div>
-        {(phase === 'play' || phase === 'challenge') && isHumanTurn && (
-          <div className={`timer-display${timerWarning ? ' timer-warning' : ''}`}>
-            {phase === 'challenge' ? t.timer_challenge : t.timer_play}: {timer}s
-          </div>
-        )}
+        <div className="header-right">
+          {(phase === 'play' || phase === 'challenge') && isHumanTurn && (
+            <div className={`timer-display${timerWarning ? ' timer-warning' : ''}`}>
+              {phase === 'challenge' ? t.timer_challenge : t.timer_play}: {timer}s
+            </div>
+          )}
+          <LangToggle />
+          <button className="btn-rules" onClick={() => setShowRules(true)}>?</button>
+        </div>
       </div>
 
       {/* AI opponent section */}
