@@ -33,11 +33,12 @@ const GameScreen: React.FC = () => {
 
   useEffect(() => {
     if (timerRef.current) clearInterval(timerRef.current);
-    if ((phase === 'play' || phase === 'challenge') && isHumanTurn) {
+    const needsTimer = (phase === 'play' && isHumanTurn) || (phase === 'challenge' && lastPlay?.playerId === 'ai');
+    if (needsTimer) {
       timerRef.current = setInterval(() => { tickTimer(); }, 1000);
     }
     return () => { if (timerRef.current) clearInterval(timerRef.current); };
-  }, [phase, isHumanTurn, tickTimer]);
+  }, [phase, isHumanTurn, lastPlay, tickTimer]);
 
   useEffect(() => {
     return () => { if (timerRef.current) clearInterval(timerRef.current); };
@@ -46,9 +47,10 @@ const GameScreen: React.FC = () => {
   const canDraw = phase === 'draw' && isHumanTurn;
   const canPlay = phase === 'play' && isHumanTurn && selectedCards.length > 0;
   const canPass = phase === 'play' && isHumanTurn;
-  const canChallenge = phase === 'challenge' && isHumanTurn && lastPlay?.playerId === 'ai';
-  const canSkipChallenge = phase === 'challenge' && isHumanTurn && lastPlay?.playerId === 'ai';
-  const timerWarning = timer <= 5 && timer > 0 && (phase === 'play' || phase === 'challenge') && isHumanTurn;
+  const aiJustPlayed = lastPlay?.playerId === 'ai';
+  const canChallenge = phase === 'challenge' && aiJustPlayed;
+  const canSkipChallenge = phase === 'challenge' && aiJustPlayed;
+  const timerWarning = timer <= 5 && timer > 0 && (phase === 'play' || (phase === 'challenge' && aiJustPlayed));
 
   return (
     <div className="game-screen">
@@ -69,7 +71,7 @@ const GameScreen: React.FC = () => {
           </div>
         </div>
         <div className="header-right">
-          {(phase === 'play' || phase === 'challenge') && isHumanTurn && (
+          {((phase === 'play' && isHumanTurn) || (phase === 'challenge' && aiJustPlayed)) && (
             <div className={`timer-display${timerWarning ? ' timer-warning' : ''}`}>
               {phase === 'challenge' ? t.timer_challenge : t.timer_play}: {timer}s
             </div>

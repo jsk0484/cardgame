@@ -30,13 +30,22 @@ export const translations = {
       '먼저 손패 0장 (핸드아웃): +10',
     ],
 
+    // Combos
+    combos_title: '조합 예시',
+    combos: [
+      { label: '싱글', desc: '카드 1장', example: ['♠7'] },
+      { label: '플러시', desc: '같은 슈트 3장', example: ['♥3', '♥7', '♥K'] },
+      { label: '스트레이트', desc: '연속 숫자 3장', example: ['♠5', '♦6', '♣7'] },
+      { label: '트리플', desc: '같은 숫자 3장', example: ['♠9', '♥9', '♦9'] },
+    ],
+
     // Special Cards
     special_title: '특수 카드',
-    special: [
-      'HANDOOF (2장): 손패 전체를 상대와 교환',
-      'Nullify (2장): 상대의 방금 낸 카드를 무효화',
-      'Red Joker (2장): 어떤 슈트·숫자로도 선언 가능',
-      'Black Joker (2장): 상대 손패에서 카드 1장 랜덤 탈취',
+    special_cards: [
+      { rank: 'HF', suit: 'joker', color: 'purple', name: 'HANDOOF', count: '×2', desc: '손패 전체를 상대와 교환' },
+      { rank: 'NL', suit: 'club', color: 'green', name: 'Nullify', count: '×2', desc: '상대의 방금 낸 카드를 무효화' },
+      { rank: 'RJ', suit: 'joker', color: '#cc3333', name: 'Red Joker', count: '×2', desc: '어떤 슈트·숫자로도 선언 가능' },
+      { rank: 'BJ', suit: 'joker', color: '#333', name: 'Black Joker', count: '×2', desc: '상대 손패에서 카드 1장 탈취' },
     ],
 
     // Game Screen
@@ -105,13 +114,22 @@ export const translations = {
       'Handout — first to empty hand: +10',
     ],
 
+    // Combos
+    combos_title: 'Combo Examples',
+    combos: [
+      { label: 'Single', desc: 'Any 1 card', example: ['♠7'] },
+      { label: 'Flush', desc: '3 cards, same suit', example: ['♥3', '♥7', '♥K'] },
+      { label: 'Straight', desc: '3 consecutive ranks', example: ['♠5', '♦6', '♣7'] },
+      { label: 'Triple', desc: '3 cards, same rank', example: ['♠9', '♥9', '♦9'] },
+    ],
+
     // Special Cards
     special_title: 'Special Cards',
-    special: [
-      'HANDOOF (×2): Swap your entire hand with an opponent',
-      'Nullify (×2): Invalidate the opponent\'s last played cards',
-      'Red Joker (×2): Declare any suit and rank when played',
-      'Black Joker (×2): Steal 1 random card from opponent\'s hand',
+    special_cards: [
+      { rank: 'HF', suit: 'joker', color: 'purple', name: 'HANDOOF', count: '×2', desc: 'Swap entire hand with opponent' },
+      { rank: 'NL', suit: 'club', color: 'green', name: 'Nullify', count: '×2', desc: "Invalidate opponent's last play" },
+      { rank: 'RJ', suit: 'joker', color: '#cc3333', name: 'Red Joker', count: '×2', desc: 'Declare any suit and rank' },
+      { rank: 'BJ', suit: 'joker', color: '#333', name: 'Black Joker', count: '×2', desc: 'Steal 1 random card from opponent' },
     ],
 
     // Game Screen
@@ -153,6 +171,9 @@ export const translations = {
   },
 } as const;
 
+export type SpecialCard = { rank: string; suit: string; color: string; name: string; count: string; desc: string };
+export type Combo = { label: string; desc: string; example: readonly string[] };
+
 export type T = {
   subtitle: string;
   nickname_placeholder: string;
@@ -162,8 +183,10 @@ export type T = {
   rules: readonly string[];
   scoring_title: string;
   scoring: readonly string[];
+  combos_title: string;
+  combos: readonly Combo[];
   special_title: string;
-  special: readonly string[];
+  special_cards: readonly SpecialCard[];
   round: string;
   thinking: string;
   no_cards: string;

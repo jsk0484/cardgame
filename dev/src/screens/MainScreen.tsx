@@ -52,7 +52,7 @@ const MainScreen: React.FC = () => {
         <div className="main-rules">
           <h3>{t.special_title}</h3>
           <ul>
-            {t.special.map((r, i) => <li key={i}>{r}</li>)}
+            {t.special_cards.map((c, i) => <li key={i}><b>{c.name}</b> {c.count} — {c.desc}</li>)}
           </ul>
         </div>
 

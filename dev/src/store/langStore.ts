@@ -9,10 +9,10 @@ interface LangStore {
 
 export const useLangStore = create<LangStore>((set) => ({
   lang: 'ko',
-  t: translations['ko'] as T,
+  t: translations['ko'] as unknown as T,
   toggleLang: () =>
     set((s) => {
       const next: Lang = s.lang === 'ko' ? 'en' : 'ko';
-      return { lang: next, t: translations[next] as T };
+      return { lang: next, t: translations[next] as unknown as T };
     }),
 }));

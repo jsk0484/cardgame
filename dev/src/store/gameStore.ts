@@ -239,7 +239,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
   challenge: () => {
     const state = get();
-    if (state.phase !== 'challenge' || state.currentTurn !== HUMAN_IDX) return;
+    if (state.phase !== 'challenge') return;
     if (state.lastPlay && state.lastPlay.playerId === 'ai') {
       get()._resolveChallenge('human', 'ai');
     }
