@@ -1,0 +1,74 @@
+.pile-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  transition: transform 0.1s ease;
+}
+
+.pile-container:hover:not(.pile-disabled) {
+  transform: scale(1.04);
+}
+
+.pile-disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.pile-label {
+  color: #e8d5a3;
+  font-size: 0.78em;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.pile-card-area {
+  position: relative;
+  width: 74px;
+  height: 104px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pile-stack {
+  position: relative;
+}
+
+.pile-shadow {
+  position: absolute;
+  width: 70px;
+  height: 100px;
+  border-radius: 8px;
+  background: rgba(0,0,0,0.3);
+  border: 2px solid rgba(0,0,0,0.4);
+}
+
+.pile-shadow-2 {
+  top: -3px;
+  left: -3px;
+}
+
+.pile-shadow-3 {
+  top: -5px;
+  left: -5px;
+}
+
+.pile-empty {
+  width: 70px;
+  height: 100px;
+  border-radius: 8px;
+  border: 2px dashed rgba(255,255,255,0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255,255,255,0.35);
+  font-size: 0.8em;
+}
+
+.pile-count {
+  color: rgba(255,255,255,0.6);
+  font-size: 0.72em;
+}

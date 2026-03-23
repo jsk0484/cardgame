@@ -1,0 +1,151 @@
+.result-screen {
+  min-height: 100vh;
+  background: radial-gradient(ellipse at center, #1e6b32 0%, #0d3d1a 70%, #071f0d 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.result-card {
+  background: rgba(255, 255, 255, 0.07);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 20px;
+  padding: 48px 52px;
+  max-width: 460px;
+  width: 100%;
+  text-align: center;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+}
+
+.result-trophy {
+  font-size: 4em;
+  margin-bottom: 12px;
+}
+
+.result-title {
+  font-size: 2.2em;
+  font-weight: 900;
+  color: #f0c040;
+  margin: 0 0 6px;
+  text-shadow: 0 2px 8px rgba(240,192,64,0.3);
+}
+
+.result-subtitle {
+  color: rgba(255,255,255,0.45);
+  font-size: 0.82em;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  margin: 0 0 28px;
+}
+
+.result-scores {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.result-player {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: rgba(0,0,0,0.2);
+  border-radius: 10px;
+  padding: 12px 18px;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+
+.result-winner {
+  background: rgba(240,192,64,0.12);
+  border-color: rgba(240,192,64,0.35);
+}
+
+.result-rank {
+  font-size: 1em;
+  font-weight: 900;
+  color: #f0c040;
+  min-width: 28px;
+}
+
+.result-player-info {
+  flex: 1;
+  text-align: left;
+}
+
+.result-player-name {
+  font-weight: 700;
+  color: white;
+  font-size: 1em;
+}
+
+.result-player-tag {
+  font-size: 0.72em;
+  color: rgba(255,255,255,0.45);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.result-player-score {
+  font-size: 1.6em;
+  font-weight: 900;
+  color: #f0c040;
+}
+
+.result-diff {
+  color: rgba(255,255,255,0.55);
+  font-size: 0.88em;
+  min-height: 24px;
+  margin-bottom: 24px;
+}
+
+.result-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* Shared button styles */
+.btn {
+  padding: 10px 22px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  font-size: 0.9em;
+  font-weight: 700;
+  transition: all 0.15s ease;
+  letter-spacing: 0.04em;
+}
+
+.btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #f0c040, #c8940a);
+  color: #1a1a00;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: linear-gradient(135deg, #f5cc55, #d4a020);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(240,192,64,0.4);
+}
+
+.btn-large {
+  padding: 14px 32px;
+  font-size: 1.05em;
+  border-radius: 10px;
+}
+
+.btn-secondary {
+  background: rgba(255,255,255,0.1);
+  color: rgba(255,255,255,0.75);
+  border: 1px solid rgba(255,255,255,0.2);
+}
+
+.btn-secondary:hover {
+  background: rgba(255,255,255,0.18);
+}

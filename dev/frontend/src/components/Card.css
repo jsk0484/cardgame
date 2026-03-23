@@ -1,0 +1,115 @@
+.card {
+  width: 70px;
+  height: 100px;
+  border-radius: 8px;
+  border: 2px solid #ccc;
+  background: white;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: center;
+  position: relative;
+  cursor: default;
+  user-select: none;
+  box-shadow: 2px 3px 6px rgba(0,0,0,0.3);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  font-family: Georgia, serif;
+  flex-shrink: 0;
+}
+
+.card-small {
+  width: 48px;
+  height: 68px;
+  font-size: 0.7em;
+}
+
+.card[role="button"],
+.card-face[role="button"] {
+  cursor: pointer;
+}
+
+.card-face:hover[role="button"] {
+  transform: translateY(-4px);
+  box-shadow: 3px 6px 10px rgba(0,0,0,0.35);
+}
+
+.card-selected {
+  transform: translateY(-10px) !important;
+  border: 2.5px solid #f0c040 !important;
+  box-shadow: 0 0 12px rgba(240, 192, 64, 0.8) !important;
+}
+
+.card-special {
+  background: linear-gradient(135deg, #fff9e0, #ffe0f0);
+  border-color: #a040a0;
+}
+
+.card-back {
+  background: repeating-linear-gradient(
+    45deg,
+    #1a3a6a,
+    #1a3a6a 4px,
+    #2a5aaa 4px,
+    #2a5aaa 8px
+  );
+  border-color: #111;
+  cursor: default;
+}
+
+.card-back-pattern {
+  font-size: 3.5em;
+  color: rgba(255,255,255,0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+
+.card-corner {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1.1;
+  padding: 3px 4px;
+}
+
+.card-corner-tl {
+  top: 2px;
+  left: 3px;
+}
+
+.card-corner-br {
+  bottom: 2px;
+  right: 3px;
+  transform: rotate(180deg);
+}
+
+.card-rank {
+  font-size: 0.85em;
+  font-weight: bold;
+  color: var(--suit-color, black);
+}
+
+.card-suit-symbol {
+  font-size: 0.7em;
+  color: var(--suit-color, black);
+}
+
+.card-center-symbol {
+  font-size: 1.6em;
+  color: var(--suit-color, black);
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.card-small .card-rank {
+  font-size: 0.75em;
+}
+
+.card-small .card-center-symbol {
+  font-size: 1.2em;
+}

@@ -1,0 +1,60 @@
+.play-area {
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 12px;
+  padding: 12px 20px;
+  min-height: 100px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.play-area-label {
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.72em;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-weight: 600;
+}
+
+.play-area-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.play-area-player {
+  color: #e8d5a3;
+  font-size: 0.82em;
+}
+
+.declared-type {
+  color: #f0c040;
+  font-weight: bold;
+  text-transform: capitalize;
+}
+
+.play-area-cards {
+  display: flex;
+  gap: 5px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.play-area-count {
+  color: rgba(255,255,255,0.45);
+  font-size: 0.72em;
+}
+
+.play-area-empty {
+  color: rgba(255,255,255,0.25);
+  font-style: italic;
+  font-size: 0.85em;
+  display: flex;
+  align-items: center;
+  flex: 1;
+}

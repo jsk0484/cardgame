@@ -1,0 +1,33 @@
+.hand-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 0;
+}
+
+.hand-label {
+  color: #e8d5a3;
+  font-size: 0.85em;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+}
+
+.hand-cards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: center;
+  align-items: flex-end;
+  min-height: 110px;
+  padding: 12px 8px 4px;
+}
+
+.hand-empty {
+  color: rgba(255,255,255,0.4);
+  font-style: italic;
+  font-size: 0.9em;
+  display: flex;
+  align-items: center;
+  height: 60px;
+}
