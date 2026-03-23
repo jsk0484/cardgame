@@ -113,3 +113,16 @@
 .card-small .card-center-symbol {
   font-size: 1.2em;
 }
+
+@media (max-width: 600px) {
+  .card {
+    width: 54px;
+    height: 78px;
+    font-size: 0.85em;
+  }
+
+  .card-small {
+    width: 38px;
+    height: 54px;
+  }
+}

@@ -124,6 +124,28 @@
   margin: 20px 0 0;
 }
 
+@media (max-width: 480px) {
+  .main-card {
+    padding: 28px 20px;
+  }
+
+  .logo-title {
+    font-size: 2.2em;
+  }
+
+  .logo-suit {
+    font-size: 1.6em;
+  }
+
+  .main-rules {
+    padding: 12px 14px;
+  }
+
+  .main-rules li {
+    font-size: 0.78em;
+  }
+}
+
 /* Shared button styles */
 .btn {
   padding: 10px 22px;

@@ -6,8 +6,12 @@ import Pile from '../components/Pile';
 import PlayArea from '../components/PlayArea';
 import LangToggle from '../components/LangToggle';
 import RulesModal from '../components/RulesModal';
+import EmojiBar from '../components/EmojiBar';
 import type { HandType } from '../types';
 import './GameScreen.css';
+
+const AI_EMOJIS = ['😎', '🤔', '😂', '😤', '👀'];
+const AI_EMOJI_CHANCE = 0.25;
 
 const HAND_TYPES: HandType[] = ['single', 'flush', 'straight', 'triple', 'special'];
 
@@ -29,7 +33,19 @@ const GameScreen: React.FC = () => {
   const isHumanTurn = currentTurn === 0;
 
   const [showRules, setShowRules] = useState(false);
+  const [aiEmoji, setAiEmoji] = useState<string | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // AI sends random emoji occasionally when it's their turn
+  useEffect(() => {
+    if (!isHumanTurn && phase === 'draw') {
+      if (Math.random() < AI_EMOJI_CHANCE) {
+        const emoji = AI_EMOJIS[Math.floor(Math.random() * AI_EMOJIS.length)];
+        const t = setTimeout(() => { setAiEmoji(emoji); setTimeout(() => setAiEmoji(null), 100); }, 600);
+        return () => clearTimeout(t);
+      }
+    }
+  }, [isHumanTurn, phase]);
 
   useEffect(() => {
     if (timerRef.current) clearInterval(timerRef.current);
@@ -155,6 +171,10 @@ const GameScreen: React.FC = () => {
             ))}
           </div>
         )}
+
+        <div className="emoji-area">
+          <EmojiBar aiEmoji={aiEmoji} />
+        </div>
 
         <div className="action-buttons">
           {canDraw && (

@@ -370,19 +370,93 @@
   background: rgba(255,255,255,0.18);
 }
 
+/* ── Mobile ── */
 @media (max-width: 600px) {
   .game-header {
-    padding: 8px 12px;
+    padding: 6px 10px;
+    gap: 4px;
+  }
+
+  .game-round {
+    font-size: 0.78em;
+  }
+
+  .score-val {
+    font-size: 1.1em;
+  }
+
+  .score-name {
+    font-size: 0.65em;
+  }
+
+  .timer-display {
+    font-size: 0.75em;
+    padding: 3px 8px;
+    min-width: 70px;
+  }
+
+  .btn-rules {
+    width: 24px;
+    height: 24px;
+    font-size: 0.75em;
+  }
+
+  .opponent-section {
+    padding: 8px 10px;
+    min-height: 60px;
+  }
+
+  .ai-card-back {
+    width: 22px;
+    height: 32px;
   }
 
   .table-section {
     flex-direction: column;
+    gap: 8px;
+    padding: 8px 10px;
+    flex: unset;
+  }
+
+  .piles-area {
     gap: 12px;
-    padding: 12px;
   }
 
   .play-area-wrapper {
     width: 100%;
     min-width: unset;
   }
+
+  .controls {
+    padding: 6px 10px 12px;
+    gap: 6px;
+  }
+
+  .hand-type-selector {
+    gap: 4px;
+  }
+
+  .btn-type {
+    padding: 4px 7px;
+    font-size: 0.72em;
+  }
+
+  .action-buttons {
+    gap: 6px;
+  }
+
+  .btn {
+    padding: 8px 14px;
+    font-size: 0.82em;
+  }
+
+  .emoji-area {
+    display: flex;
+    justify-content: center;
+  }
+}
+
+.emoji-area {
+  display: flex;
+  justify-content: center;
 }

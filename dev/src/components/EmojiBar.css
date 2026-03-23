@@ -1,0 +1,64 @@
+.emoji-bar {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  position: relative;
+}
+
+.emoji-floating-area {
+  position: absolute;
+  bottom: 44px;
+  left: 50%;
+  transform: translateX(-50%);
+  pointer-events: none;
+  display: flex;
+  gap: 6px;
+  height: 48px;
+  align-items: flex-end;
+}
+
+.emoji-float {
+  font-size: 1.8em;
+  animation: floatUp 1.8s ease-out forwards;
+  display: inline-block;
+}
+
+.emoji-float-ai {
+  color: #c8e8ff;
+}
+
+.emoji-float-player {
+  color: #f0c040;
+}
+
+@keyframes floatUp {
+  0%   { opacity: 1; transform: translateY(0) scale(1); }
+  60%  { opacity: 1; transform: translateY(-28px) scale(1.2); }
+  100% { opacity: 0; transform: translateY(-50px) scale(0.8); }
+}
+
+.emoji-buttons {
+  display: flex;
+  gap: 6px;
+}
+
+.emoji-btn {
+  background: rgba(255,255,255,0.1);
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 8px;
+  padding: 4px 8px;
+  font-size: 1.1em;
+  cursor: pointer;
+  transition: all 0.15s;
+  line-height: 1;
+}
+
+.emoji-btn:hover {
+  background: rgba(255,255,255,0.2);
+  transform: scale(1.15);
+}
+
+.emoji-btn:active {
+  transform: scale(0.95);
+}
