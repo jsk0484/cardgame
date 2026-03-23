@@ -49,7 +49,6 @@ const GameScreen: React.FC = () => {
   const canPass = phase === 'play' && isHumanTurn;
   const aiJustPlayed = lastPlay?.playerId === 'ai';
   const canChallenge = phase === 'challenge' && aiJustPlayed;
-  const canSkipChallenge = phase === 'challenge' && aiJustPlayed;
   const timerWarning = timer <= 5 && timer > 0 && (phase === 'play' || (phase === 'challenge' && aiJustPlayed));
 
   return (
@@ -173,12 +172,12 @@ const GameScreen: React.FC = () => {
             </>
           )}
 
-          {phase === 'challenge' && isHumanTurn && lastPlay?.playerId === 'ai' && (
+          {canChallenge && (
             <>
-              <button className="btn btn-challenge" onClick={challenge} disabled={!canChallenge}>
+              <button className="btn btn-challenge" onClick={challenge}>
                 {t.challenge}
               </button>
-              <button className="btn btn-skip" onClick={skipChallenge} disabled={!canSkipChallenge}>
+              <button className="btn btn-skip" onClick={skipChallenge}>
                 {t.no_challenge}
               </button>
             </>
@@ -188,7 +187,7 @@ const GameScreen: React.FC = () => {
             <div className="waiting-text">{t.waiting_ai_challenge}</div>
           )}
 
-          {!isHumanTurn && phase !== 'end' && (
+          {!isHumanTurn && phase !== 'challenge' && phase !== 'end' && (
             <div className="waiting-text">{t.ai_thinking}</div>
           )}
         </div>
