@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { useGameStore } from '../store/gameStore';
+import { useLangStore } from '../store/langStore';
 import './MainScreen.css';
 
 const MainScreen: React.FC = () => {
   const [nickname, setNickname] = useState('');
   const setNicknameStore = useGameStore(s => s.setNickname);
   const startGame = useGameStore(s => s.startGame);
+  const t = useLangStore(s => s.t);
 
   const handleStart = () => {
     setNicknameStore(nickname.trim() || 'Player');
@@ -24,25 +26,36 @@ const MainScreen: React.FC = () => {
           <span className="logo-title">HANDOOF</span>
           <span className="logo-suit">♥</span>
         </div>
-        <p className="main-subtitle">The Bluffing Card Game</p>
+        <p className="main-subtitle">{t.subtitle}</p>
 
+        {/* How to Play */}
         <div className="main-rules">
-          <h3>How to Play</h3>
+          <h3>{t.rules_title}</h3>
           <ul>
-            <li>Draw 1 card each turn from draw or discard pile</li>
-            <li>Play 1–3 cards and declare a hand type</li>
-            <li>Opponent can Challenge your declaration</li>
-            <li>Bluff caught: challenger +3 / bluffer -2</li>
-            <li>Bluff holds: challenger -2 / bluffer +3</li>
-            <li>Max 2 consecutive passes</li>
-            <li>3 rounds — highest cumulative score wins!</li>
+            {t.rules.map((r, i) => <li key={i}>{r}</li>)}
+          </ul>
+        </div>
+
+        {/* Scoring */}
+        <div className="main-rules">
+          <h3>{t.scoring_title}</h3>
+          <ul>
+            {t.scoring.map((r, i) => <li key={i}>{r}</li>)}
+          </ul>
+        </div>
+
+        {/* Special Cards */}
+        <div className="main-rules">
+          <h3>{t.special_title}</h3>
+          <ul>
+            {t.special.map((r, i) => <li key={i}>{r}</li>)}
           </ul>
         </div>
 
         <div className="main-form">
           <input
             type="text"
-            placeholder="Enter your nickname"
+            placeholder={t.nickname_placeholder}
             value={nickname}
             onChange={e => setNickname(e.target.value)}
             onKeyDown={handleKeyDown}
@@ -50,11 +63,11 @@ const MainScreen: React.FC = () => {
             className="main-input"
           />
           <button className="btn btn-primary btn-large" onClick={handleStart}>
-            ▶ Play vs AI
+            {t.play_vs_ai}
           </button>
         </div>
 
-        <p className="main-version">60-card deck · Local single-player</p>
+        <p className="main-version">{t.deck_info}</p>
       </div>
     </div>
   );

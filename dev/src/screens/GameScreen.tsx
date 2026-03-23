@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { useGameStore } from '../store/gameStore';
+import { useLangStore } from '../store/langStore';
 import Hand from '../components/Hand';
 import Pile from '../components/Pile';
 import PlayArea from '../components/PlayArea';
@@ -10,6 +11,7 @@ const HAND_TYPES: HandType[] = ['single', 'flush', 'straight', 'triple', 'specia
 
 const GameScreen: React.FC = () => {
   const state = useGameStore(s => s);
+  const t = useLangStore(s => s.t);
   const {
     players, drawPile, discardPile, lastPlay,
     round, currentTurn, phase, timer,
@@ -28,23 +30,14 @@ const GameScreen: React.FC = () => {
 
   useEffect(() => {
     if (timerRef.current) clearInterval(timerRef.current);
-
     if ((phase === 'play' || phase === 'challenge') && isHumanTurn) {
-      timerRef.current = setInterval(() => {
-        tickTimer();
-      }, 1000);
+      timerRef.current = setInterval(() => { tickTimer(); }, 1000);
     }
-
-    return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
-    };
+    return () => { if (timerRef.current) clearInterval(timerRef.current); };
   }, [phase, isHumanTurn, tickTimer]);
 
-  // Cleanup on unmount
   useEffect(() => {
-    return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
-    };
+    return () => { if (timerRef.current) clearInterval(timerRef.current); };
   }, []);
 
   const canDraw = phase === 'draw' && isHumanTurn;
@@ -52,14 +45,13 @@ const GameScreen: React.FC = () => {
   const canPass = phase === 'play' && isHumanTurn;
   const canChallenge = phase === 'challenge' && isHumanTurn && lastPlay?.playerId === 'ai';
   const canSkipChallenge = phase === 'challenge' && isHumanTurn && lastPlay?.playerId === 'ai';
-
   const timerWarning = timer <= 5 && timer > 0 && (phase === 'play' || phase === 'challenge') && isHumanTurn;
 
   return (
     <div className="game-screen">
       {/* Header */}
       <div className="game-header">
-        <div className="game-round">Round {round} / 3</div>
+        <div className="game-round">{t.round} {round} / 3</div>
         <div className="score-bar">
           <div className="score-item">
             <span className="score-name">{human.nickname}</span>
@@ -73,7 +65,7 @@ const GameScreen: React.FC = () => {
         </div>
         {(phase === 'play' || phase === 'challenge') && isHumanTurn && (
           <div className={`timer-display${timerWarning ? ' timer-warning' : ''}`}>
-            {phase === 'challenge' ? 'Challenge: ' : 'Play: '}{timer}s
+            {phase === 'challenge' ? t.timer_challenge : t.timer_play}: {timer}s
           </div>
         )}
       </div>
@@ -82,16 +74,16 @@ const GameScreen: React.FC = () => {
       <div className="opponent-section">
         <div className="opponent-info">
           <span className="opponent-name">{ai.nickname}</span>
-          {!isHumanTurn && <span className="turn-indicator">thinking...</span>}
+          {!isHumanTurn && <span className="turn-indicator">{t.thinking}</span>}
         </div>
         <div className="opponent-hand">
           {Array.from({ length: ai.handCount }).map((_, i) => (
             <div key={i} className="ai-card-back" />
           ))}
-          {ai.handCount === 0 && <span className="empty-hand-text">No cards</span>}
+          {ai.handCount === 0 && <span className="empty-hand-text">{t.no_cards}</span>}
         </div>
         <div className="opponent-stats">
-          Score: {ai.score} | Cards: {ai.handCount}
+          {t.score}: {ai.score} | {t.cards}: {ai.handCount}
         </div>
       </div>
 
@@ -100,20 +92,19 @@ const GameScreen: React.FC = () => {
         <div className="piles-area">
           <Pile
             cards={drawPile}
-            label="Draw Pile"
+            label={t.draw_pile}
             faceDown
             onClick={canDraw ? () => drawCard(false) : undefined}
             disabled={!canDraw}
           />
           <Pile
             cards={discardPile}
-            label="Discard"
+            label={t.discard}
             faceDown={false}
             onClick={canDraw && discardPile.length > 0 ? () => drawCard(true) : undefined}
             disabled={!canDraw || discardPile.length === 0}
           />
         </div>
-
         <div className="play-area-wrapper">
           <PlayArea
             lastPlay={lastPlay}
@@ -140,17 +131,16 @@ const GameScreen: React.FC = () => {
 
       {/* Controls */}
       <div className="controls">
-        {/* Declare hand type selector */}
         {phase === 'play' && isHumanTurn && (
           <div className="hand-type-selector">
-            <span className="hand-type-label">Declare:</span>
+            <span className="hand-type-label">{t.declare}</span>
             {HAND_TYPES.map(ht => (
               <button
                 key={ht}
                 className={`btn btn-type${declaredHandType === ht ? ' btn-type-active' : ''}`}
                 onClick={() => setDeclaredHandType(ht)}
               >
-                {ht}
+                {t.hand_types[ht]}
               </button>
             ))}
           </div>
@@ -158,53 +148,37 @@ const GameScreen: React.FC = () => {
 
         <div className="action-buttons">
           {canDraw && (
-            <div className="draw-hint">Click Draw Pile or Discard Pile to draw</div>
+            <div className="draw-hint">{t.draw_hint}</div>
           )}
 
           {phase === 'play' && isHumanTurn && (
             <>
-              <button
-                className="btn btn-play"
-                onClick={playCards}
-                disabled={!canPlay}
-              >
-                Play ({selectedCards.length})
+              <button className="btn btn-play" onClick={playCards} disabled={!canPlay}>
+                {t.play} ({selectedCards.length})
               </button>
-              <button
-                className="btn btn-pass"
-                onClick={pass}
-                disabled={!canPass}
-              >
-                Pass ({human.passStreak}/{2})
+              <button className="btn btn-pass" onClick={pass} disabled={!canPass}>
+                {t.pass} ({human.passStreak}/2)
               </button>
             </>
           )}
 
           {phase === 'challenge' && isHumanTurn && lastPlay?.playerId === 'ai' && (
             <>
-              <button
-                className="btn btn-challenge"
-                onClick={challenge}
-                disabled={!canChallenge}
-              >
-                Challenge!
+              <button className="btn btn-challenge" onClick={challenge} disabled={!canChallenge}>
+                {t.challenge}
               </button>
-              <button
-                className="btn btn-skip"
-                onClick={skipChallenge}
-                disabled={!canSkipChallenge}
-              >
-                No Challenge
+              <button className="btn btn-skip" onClick={skipChallenge} disabled={!canSkipChallenge}>
+                {t.no_challenge}
               </button>
             </>
           )}
 
           {phase === 'challenge' && isHumanTurn && lastPlay?.playerId === 'human' && (
-            <div className="waiting-text">Waiting for AI challenge decision...</div>
+            <div className="waiting-text">{t.waiting_ai_challenge}</div>
           )}
 
           {!isHumanTurn && phase !== 'end' && (
-            <div className="waiting-text">AI is taking its turn...</div>
+            <div className="waiting-text">{t.ai_thinking}</div>
           )}
         </div>
       </div>
