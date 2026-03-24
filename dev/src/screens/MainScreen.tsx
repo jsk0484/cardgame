@@ -4,6 +4,7 @@ import { useLangStore } from '../store/langStore';
 import { useAuthStore } from '../store/authStore';
 import LangToggle from '../components/LangToggle';
 import LoginScreen from './LoginScreen';
+import ShopScreen from './ShopScreen';
 import './MainScreen.css';
 
 interface MainScreenProps {
@@ -14,6 +15,7 @@ const MainScreen: React.FC<MainScreenProps> = ({ onMultiplayer }) => {
   const [nickname, setNickname] = useState('');
   const [restored, setRestored] = useState(false);
   const [manualLogin, setShowLogin] = useState(false);
+  const [showShop, setShowShop] = useState(false);
   const setNicknameStore = useGameStore(s => s.setNickname);
   const startGame = useGameStore(s => s.startGame);
   const t = useLangStore(s => s.t);
@@ -44,6 +46,7 @@ const MainScreen: React.FC<MainScreenProps> = ({ onMultiplayer }) => {
   return (
     <div className="main-screen">
       {showLogin && <LoginScreen onBack={() => { setShowLogin(false); }} />}
+      {showShop && <ShopScreen onClose={() => setShowShop(false)} />}
       <div className="main-card">
         <div className="main-top-bar">
           <LangToggle />
@@ -54,6 +57,7 @@ const MainScreen: React.FC<MainScreenProps> = ({ onMultiplayer }) => {
                 <span className="main-user-stat">🏆 {user.wins}승</span>
                 <span className="main-user-stat">★ {user.coins}코인</span>
               </span>
+              <button className="main-shop-btn" onClick={() => setShowShop(true)}>상점</button>
               <button className="main-user-logout" onClick={logout}>로그아웃</button>
             </div>
           ) : (

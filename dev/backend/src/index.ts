@@ -6,7 +6,7 @@ import { buildDeck, dealHands } from './game/deck';
 import { applyChallengeScores, determineActualHandType, getComboBonus } from './game/scoring';
 import { generateRoomId, getRoom, setRoom, deleteRoom, getPublicWaitingRoom, getAllRooms } from './rooms';
 import { Card, GameRoom, HandType, PlayedHand } from './types';
-import { registerUser, loginUser, getUserByToken, addWin, addCoins } from './users';
+import { registerUser, loginUser, getUserByToken, addWin, addCoins, buyItem, selectItem } from './users';
 
 const app = express();
 app.use(cors());
@@ -63,6 +63,29 @@ app.post('/api/win', (req, res) => {
   if (!token) return res.status(401).json({ error: 'NO_TOKEN' });
   const user = addWin(token);
   if (!user) return res.status(401).json({ error: 'INVALID_TOKEN' });
+  res.json({ user });
+});
+
+app.post('/api/shop/buy', (req, res) => {
+  const token = req.headers.authorization?.replace('Bearer ', '');
+  if (!token) return res.status(401).json({ error: 'NO_TOKEN' });
+  const { itemId, price } = req.body;
+  if (!itemId || typeof price !== 'number') return res.status(400).json({ error: 'INVALID_PARAMS' });
+  const result = buyItem(token, itemId, price);
+  if (!result) return res.status(401).json({ error: 'INVALID_TOKEN' });
+  if ('error' in result) return res.status(400).json({ error: result.error });
+  res.json({ user: result });
+});
+
+app.post('/api/shop/select', (req, res) => {
+  const token = req.headers.authorization?.replace('Bearer ', '');
+  if (!token) return res.status(401).json({ error: 'NO_TOKEN' });
+  const { itemId, type } = req.body;
+  if (typeof itemId !== 'string' || (type !== 'card_back' && type !== 'card_emoji')) {
+    return res.status(400).json({ error: 'INVALID_PARAMS' });
+  }
+  const user = selectItem(token, itemId, type);
+  if (!user) return res.status(400).json({ error: 'NOT_OWNED' });
   res.json({ user });
 });
 

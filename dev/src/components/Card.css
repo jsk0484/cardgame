@@ -114,6 +114,22 @@
   font-size: 1.2em;
 }
 
+.card-emoji-sticker {
+  position: absolute;
+  bottom: 18px;
+  right: 5px;
+  font-size: 0.75em;
+  line-height: 1;
+  pointer-events: none;
+  opacity: 0.85;
+}
+
+.card-small .card-emoji-sticker {
+  font-size: 0.6em;
+  bottom: 12px;
+  right: 3px;
+}
+
 @media (max-width: 600px) {
   .card {
     width: 54px;

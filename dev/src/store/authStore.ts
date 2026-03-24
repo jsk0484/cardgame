@@ -9,6 +9,9 @@ export interface AuthUser {
   nickname: string;
   wins: number;
   coins: number;
+  ownedItems: string[];
+  selectedCardBack: string;
+  selectedCardEmoji: string;
 }
 
 interface AuthStore {
@@ -21,6 +24,8 @@ interface AuthStore {
   logout: () => void;
   restore: () => Promise<void>;
   recordWin: () => Promise<void>;
+  buyItem: (itemId: string, price: number) => Promise<boolean>;
+  selectItem: (itemId: string, type: 'card_back' | 'card_emoji') => Promise<void>;
   clearError: () => void;
 }
 
@@ -106,6 +111,42 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
       const res = await fetch(`${BACKEND_URL}/api/win`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        set({ user: data.user });
+      }
+    } catch {}
+  },
+
+  buyItem: async (itemId: string, price: number) => {
+    const { token } = get();
+    if (!token) return false;
+    try {
+      const res = await fetch(`${BACKEND_URL}/api/shop/buy`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ itemId, price }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        set({ user: data.user });
+        return true;
+      }
+      return false;
+    } catch {
+      return false;
+    }
+  },
+
+  selectItem: async (itemId: string, type: 'card_back' | 'card_emoji') => {
+    const { token } = get();
+    if (!token) return;
+    try {
+      const res = await fetch(`${BACKEND_URL}/api/shop/select`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ itemId, type }),
       });
       if (res.ok) {
         const data = await res.json();

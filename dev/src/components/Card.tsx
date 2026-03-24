@@ -1,5 +1,7 @@
 import React from 'react';
 import type { Card as CardType } from '../types';
+import { useAuthStore } from '../store/authStore';
+import { getItemById } from '../store/shopItems';
 import './Card.css';
 
 interface CardProps {
@@ -54,10 +56,20 @@ function getRankDisplay(card: CardType): string {
 }
 
 const CardComponent: React.FC<CardProps> = ({ card, faceDown = false, selected = false, onClick, small = false }) => {
+  const user = useAuthStore(s => s.user);
+  const backItemId = user?.selectedCardBack ?? '';
+  const emojiItemId = user?.selectedCardEmoji ?? '';
+  const backItem = backItemId ? getItemById(backItemId) : null;
+  const emojiItem = emojiItemId ? getItemById(emojiItemId) : null;
+
   if (faceDown) {
+    const backStyle = backItem?.backStyle
+      ? { background: backItem.backStyle }
+      : undefined;
     return (
       <div
         className={`card card-back${small ? ' card-small' : ''}`}
+        style={backStyle}
         onClick={onClick}
         role={onClick ? 'button' : undefined}
         tabIndex={onClick ? 0 : undefined}
@@ -84,6 +96,9 @@ const CardComponent: React.FC<CardProps> = ({ card, faceDown = false, selected =
         <span className="card-suit-symbol">{suitSymbol}</span>
       </div>
       <div className="card-center-symbol">{suitSymbol}</div>
+      {emojiItem?.emoji && !card.isSpecial && (
+        <div className="card-emoji-sticker">{emojiItem.emoji}</div>
+      )}
       <div className="card-corner card-corner-br">
         <span className="card-rank">{rankDisplay}</span>
         <span className="card-suit-symbol">{suitSymbol}</span>

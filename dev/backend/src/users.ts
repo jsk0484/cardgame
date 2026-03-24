@@ -10,6 +10,9 @@ export interface User {
   nickname: string;
   wins: number;
   coins: number;
+  ownedItems: string[];
+  selectedCardBack: string;
+  selectedCardEmoji: string;
   createdAt: number;
 }
 
@@ -49,6 +52,9 @@ export async function registerUser(username: string, password: string, nickname:
     nickname: nickname || username,
     wins: 0,
     coins: 0,
+    ownedItems: [],
+    selectedCardBack: '',
+    selectedCardEmoji: '',
     createdAt: Date.now(),
   };
   users[user.id] = user;
@@ -93,6 +99,37 @@ export function addWin(token: string): User | null {
   users[userId].coins += 50;
   saveUsers(users);
   const { passwordHash: _, ...safeUser } = users[userId];
+  return safeUser as User;
+}
+
+export function buyItem(token: string, itemId: string, price: number): User | { error: string } | null {
+  const userId = tokenMap[token];
+  if (!userId) return null;
+  const users = loadUsers();
+  const u = users[userId];
+  if (!u) return null;
+  if (!u.ownedItems) u.ownedItems = [];
+  if (u.ownedItems.includes(itemId)) return { error: 'ALREADY_OWNED' };
+  if ((u.coins ?? 0) < price) return { error: 'NOT_ENOUGH_COINS' };
+  u.coins -= price;
+  u.ownedItems.push(itemId);
+  saveUsers(users);
+  const { passwordHash: _, ...safeUser } = u;
+  return safeUser as User;
+}
+
+export function selectItem(token: string, itemId: string, type: 'card_back' | 'card_emoji'): User | null {
+  const userId = tokenMap[token];
+  if (!userId) return null;
+  const users = loadUsers();
+  const u = users[userId];
+  if (!u) return null;
+  // Allow empty string to deselect
+  if (itemId !== '' && !u.ownedItems?.includes(itemId)) return null;
+  if (type === 'card_back') u.selectedCardBack = itemId;
+  else u.selectedCardEmoji = itemId;
+  saveUsers(users);
+  const { passwordHash: _, ...safeUser } = u;
   return safeUser as User;
 }
 
