@@ -6,7 +6,7 @@ import { buildDeck, dealHands } from './game/deck';
 import { applyChallengeScores, determineActualHandType, getComboBonus } from './game/scoring';
 import { generateRoomId, getRoom, setRoom, deleteRoom, getPublicWaitingRoom, getAllRooms } from './rooms';
 import { Card, GameRoom, HandType, PlayedHand } from './types';
-import { registerUser, loginUser, getUserByToken, addWin, addCoins, buyItem, selectItem } from './users';
+import { registerUser, loginUser, getUserByToken, addWin, buyItem, selectItem } from './users';
 
 const app = express();
 app.use(cors());
@@ -61,9 +61,11 @@ app.get('/api/me', (req, res) => {
 app.post('/api/win', (req, res) => {
   const token = req.headers.authorization?.replace('Bearer ', '');
   if (!token) return res.status(401).json({ error: 'NO_TOKEN' });
-  const user = addWin(token);
+  const type = req.body?.type; // 'ai' | 'multi'
+  const coins = type === 'multi' ? 50 : 20;
+  const user = addWin(token, coins);
   if (!user) return res.status(401).json({ error: 'INVALID_TOKEN' });
-  res.json({ user });
+  res.json({ user, coinsEarned: coins });
 });
 
 app.post('/api/shop/buy', (req, res) => {

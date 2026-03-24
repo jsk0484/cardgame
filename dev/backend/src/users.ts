@@ -90,13 +90,13 @@ export function getUserByToken(token: string): User | null {
   return safeUser as User;
 }
 
-export function addWin(token: string): User | null {
+export function addWin(token: string, coins: number): User | null {
   const userId = tokenMap[token];
   if (!userId) return null;
   const users = loadUsers();
   if (!users[userId]) return null;
   users[userId].wins += 1;
-  users[userId].coins += 50;
+  users[userId].coins += coins;
   saveUsers(users);
   const { passwordHash: _, ...safeUser } = users[userId];
   return safeUser as User;

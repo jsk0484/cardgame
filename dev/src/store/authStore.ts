@@ -11,7 +11,6 @@ export interface AuthUser {
   coins: number;
   ownedItems: string[];
   selectedCardBack: string;
-  selectedCardEmoji: string;
 }
 
 interface AuthStore {
@@ -23,9 +22,9 @@ interface AuthStore {
   login: (username: string, password: string) => Promise<boolean>;
   logout: () => void;
   restore: () => Promise<void>;
-  recordWin: () => Promise<void>;
+  recordWin: (type: 'ai' | 'multi') => Promise<void>;
   buyItem: (itemId: string, price: number) => Promise<boolean>;
-  selectItem: (itemId: string, type: 'card_back' | 'card_emoji') => Promise<void>;
+  selectItem: (itemId: string, type: 'card_back') => Promise<void>;
   clearError: () => void;
 }
 
@@ -104,13 +103,14 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     } catch {}
   },
 
-  recordWin: async () => {
+  recordWin: async (type: 'ai' | 'multi') => {
     const { token } = get();
     if (!token) return;
     try {
       const res = await fetch(`${BACKEND_URL}/api/win`, {
         method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ type }),
       });
       if (res.ok) {
         const data = await res.json();
@@ -139,7 +139,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     }
   },
 
-  selectItem: async (itemId: string, type: 'card_back' | 'card_emoji') => {
+  selectItem: async (itemId: string, type: 'card_back') => {
     const { token } = get();
     if (!token) return;
     try {

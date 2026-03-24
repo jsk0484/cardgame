@@ -21,7 +21,7 @@ const ResultScreen: React.FC = () => {
   useEffect(() => {
     if (humanWon && user && !recordedRef.current) {
       recordedRef.current = true;
-      recordWin();
+      recordWin('ai');
     }
   }, []);
 
@@ -65,7 +65,7 @@ const ResultScreen: React.FC = () => {
             </p>
           )}
           {humanWon && user && (
-            <div className="result-reward">★ +50 코인 획득! (총 {user.coins}코인)</div>
+            <div className="result-reward">★ +20 코인 획득! (총 {user.coins}코인)</div>
           )}
           {humanWon && !user && (
             <div className="result-reward-hint">로그인하면 승리 기록과 코인이 저장됩니다</div>

@@ -9,16 +9,15 @@ interface ShopScreenProps {
 
 const ShopScreen: React.FC<ShopScreenProps> = ({ onClose }) => {
   const { user, buyItem, selectItem } = useAuthStore();
-  const [tab, setTab] = useState<'card_back' | 'card_emoji'>('card_back');
+  const [tab, setTab] = useState<'card_back' | 'emote'>('card_back');
   const [msg, setMsg] = useState<string | null>(null);
 
   const backs = SHOP_ITEMS.filter(i => i.type === 'card_back');
-  const emojis = SHOP_ITEMS.filter(i => i.type === 'card_emoji');
-  const items = tab === 'card_back' ? backs : emojis;
+  const emotes = SHOP_ITEMS.filter(i => i.type === 'emote');
+  const items = tab === 'card_back' ? backs : emotes;
 
   const ownedIds: string[] = user?.ownedItems ?? [];
   const selectedBack = user?.selectedCardBack ?? '';
-  const selectedEmoji = user?.selectedCardEmoji ?? '';
 
   const showMsg = (text: string) => {
     setMsg(text);
@@ -33,15 +32,10 @@ const ShopScreen: React.FC<ShopScreenProps> = ({ onClose }) => {
     else showMsg('구매 실패.');
   };
 
-  const handleSelect = async (itemId: string, type: 'card_back' | 'card_emoji') => {
-    if (!user) { showMsg('로그인이 필요합니다.'); return; }
-    await selectItem(itemId, type);
-    showMsg('적용 완료!');
-  };
-
-  const handleDeselect = async (type: 'card_back' | 'card_emoji') => {
-    await selectItem('', type);
-    showMsg('해제되었습니다.');
+  const handleSelectBack = async (itemId: string) => {
+    if (!user) return;
+    await selectItem(itemId, 'card_back');
+    showMsg(itemId === '' ? '해제되었습니다.' : '적용 완료!');
   };
 
   return (
@@ -59,34 +53,33 @@ const ShopScreen: React.FC<ShopScreenProps> = ({ onClose }) => {
             onClick={() => setTab('card_back')}
           >카드 뒷면</button>
           <button
-            className={`shop-tab${tab === 'card_emoji' ? ' active' : ''}`}
-            onClick={() => setTab('card_emoji')}
-          >카드 이모지</button>
+            className={`shop-tab${tab === 'emote' ? ' active' : ''}`}
+            onClick={() => setTab('emote')}
+          >감정표현</button>
         </div>
 
         {msg && <div className="shop-msg">{msg}</div>}
 
         <div className="shop-items">
-          {/* 기본(해제) 옵션 */}
-          <div className={`shop-item${(tab === 'card_back' ? selectedBack === '' : selectedEmoji === '') ? ' shop-item-equipped' : ''}`}>
-            <div className="shop-preview">
-              {tab === 'card_back'
-                ? <div className="shop-card-back-preview shop-back-default">🂠</div>
-                : <div className="shop-emoji-preview">—</div>
-              }
+          {/* 카드 뒷면 탭: 기본(해제) 옵션 */}
+          {tab === 'card_back' && (
+            <div className={`shop-item${selectedBack === '' ? ' shop-item-equipped' : ''}`}>
+              <div className="shop-preview">
+                <div className="shop-card-back-preview shop-back-default">🂠</div>
+              </div>
+              <div className="shop-item-name">기본</div>
+              <button
+                className="shop-btn shop-btn-select"
+                onClick={() => handleSelectBack('')}
+              >
+                {selectedBack === '' ? '적용 중' : '기본으로'}
+              </button>
             </div>
-            <div className="shop-item-name">기본</div>
-            <button
-              className="shop-btn shop-btn-select"
-              onClick={() => handleDeselect(tab)}
-            >
-              {(tab === 'card_back' ? selectedBack === '' : selectedEmoji === '') ? '적용 중' : '기본으로'}
-            </button>
-          </div>
+          )}
 
           {items.map(item => {
             const owned = ownedIds.includes(item.id);
-            const isSelected = tab === 'card_back' ? selectedBack === item.id : selectedEmoji === item.id;
+            const isSelected = tab === 'card_back' && selectedBack === item.id;
 
             return (
               <div key={item.id} className={`shop-item${isSelected ? ' shop-item-equipped' : ''}${owned ? ' shop-item-owned' : ''}`}>
@@ -102,6 +95,9 @@ const ShopScreen: React.FC<ShopScreenProps> = ({ onClose }) => {
                 </div>
                 <div className="shop-item-name">{item.name}</div>
                 {isSelected && <div className="shop-equipped-badge">적용 중</div>}
+                {owned && item.type === 'emote' && (
+                  <div className="shop-owned-badge">보유 중</div>
+                )}
                 {!owned ? (
                   <button
                     className="shop-btn shop-btn-buy"
@@ -110,18 +106,22 @@ const ShopScreen: React.FC<ShopScreenProps> = ({ onClose }) => {
                   >
                     ★ {item.price}
                   </button>
-                ) : (
+                ) : item.type === 'card_back' ? (
                   <button
                     className={`shop-btn ${isSelected ? 'shop-btn-selected' : 'shop-btn-select'}`}
-                    onClick={() => isSelected ? handleDeselect(tab) : handleSelect(item.id, item.type)}
+                    onClick={() => handleSelectBack(isSelected ? '' : item.id)}
                   >
                     {isSelected ? '해제' : '적용'}
                   </button>
-                )}
+                ) : null}
               </div>
             );
           })}
         </div>
+
+        {tab === 'emote' && (
+          <div className="shop-emote-hint">구매한 감정표현은 게임 중 이모지 바에 자동으로 추가됩니다.</div>
+        )}
       </div>
     </div>
   );

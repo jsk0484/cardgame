@@ -210,6 +210,20 @@
   border: 1px solid #c880ff;
 }
 
+.shop-owned-badge {
+  font-size: 0.7em;
+  color: #7ec8a0;
+  font-weight: bold;
+}
+
+.shop-emote-hint {
+  text-align: center;
+  padding: 10px 16px;
+  font-size: 0.8em;
+  color: #888;
+  border-top: 1px solid #2a2a4a;
+}
+
 @media (max-width: 480px) {
   .shop-items {
     grid-template-columns: repeat(2, 1fr);

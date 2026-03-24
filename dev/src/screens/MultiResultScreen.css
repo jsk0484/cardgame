@@ -109,6 +109,19 @@
   font-style: italic;
 }
 
+.mresult-reward {
+  margin: 8px 0 4px;
+  color: #f0c040;
+  font-weight: bold;
+  font-size: 1em;
+}
+
+.mresult-reward-hint {
+  margin: 8px 0 4px;
+  color: rgba(255,255,255,0.45);
+  font-size: 0.82em;
+}
+
 .mresult-actions {
   display: flex;
   flex-direction: column;

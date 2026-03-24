@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { useMultiStore } from '../store/multiStore';
+import { useAuthStore } from '../store/authStore';
 import './MultiResultScreen.css';
 
 interface MultiResultScreenProps {
@@ -8,12 +9,21 @@ interface MultiResultScreenProps {
 
 const MultiResultScreen: React.FC<MultiResultScreenProps> = ({ onBack }) => {
   const { gameWinner, finalScores, myId, disconnect } = useMultiStore();
+  const { user, recordWin } = useAuthStore();
+  const recordedRef = useRef(false);
 
   const sorted = [...finalScores].sort((a, b) => b.score - a.score);
   const topScore = sorted[0]?.score ?? 0;
   const myEntry = finalScores.find(p => p.id === myId);
   const iWon = myEntry?.score === topScore && myEntry?.score > 0;
   const isTie = sorted.length > 1 && sorted[0].score === sorted[1].score;
+
+  useEffect(() => {
+    if (iWon && !isTie && user && !recordedRef.current) {
+      recordedRef.current = true;
+      recordWin('multi');
+    }
+  }, []);
 
   const handlePlayAgain = () => {
     disconnect();
@@ -64,6 +74,12 @@ const MultiResultScreen: React.FC<MultiResultScreenProps> = ({ onBack }) => {
               ? 'You won! Great bluffing skills!'
               : `You scored ${myEntry.score} points.`}
           </div>
+        )}
+        {iWon && !isTie && user && (
+          <div className="mresult-reward">★ +50 코인 획득! (총 {user.coins}코인)</div>
+        )}
+        {iWon && !isTie && !user && (
+          <div className="mresult-reward-hint">로그인하면 승리 기록과 코인이 저장됩니다</div>
         )}
 
         <div className="mresult-actions">

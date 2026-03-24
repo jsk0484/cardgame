@@ -1,10 +1,10 @@
 export interface ShopItem {
   id: string;
-  type: 'card_back' | 'card_emoji';
+  type: 'card_back' | 'emote';
   name: string;
   price: number;
   backStyle?: string; // CSS background for card backs
-  emoji?: string;     // emoji character for card_emoji items
+  emoji?: string;     // emoji character for emotes
 }
 
 export const SHOP_ITEMS: ShopItem[] = [
@@ -52,17 +52,22 @@ export const SHOP_ITEMS: ShopItem[] = [
     backStyle: 'repeating-linear-gradient(45deg,#6a1a4a,#6a1a4a 4px,#e91e8c 4px,#e91e8c 8px)',
   },
 
-  // ── 카드 이모지 ──────────────────────────────────────────────
-  { id: 'emoji_fire',      type: 'card_emoji', name: '불꽃',  price: 50,  emoji: '🔥' },
-  { id: 'emoji_star',      type: 'card_emoji', name: '별',    price: 50,  emoji: '⭐' },
-  { id: 'emoji_diamond',   type: 'card_emoji', name: '다이아', price: 75,  emoji: '💎' },
-  { id: 'emoji_lightning', type: 'card_emoji', name: '번개',  price: 75,  emoji: '⚡' },
-  { id: 'emoji_moon',      type: 'card_emoji', name: '달',    price: 75,  emoji: '🌙' },
-  { id: 'emoji_cherry',    type: 'card_emoji', name: '벚꽃',  price: 100, emoji: '🌸' },
-  { id: 'emoji_crown',     type: 'card_emoji', name: '왕관',  price: 150, emoji: '👑' },
-  { id: 'emoji_rainbow',   type: 'card_emoji', name: '무지개', price: 200, emoji: '🌈' },
+  // ── 감정 이모지 (EmojiBar용) ────────────────────────────────
+  { id: 'emote_devil',   type: 'emote', name: '악마',  price: 75,  emoji: '😈' },
+  { id: 'emote_party',   type: 'emote', name: '파티',  price: 50,  emoji: '🥳' },
+  { id: 'emote_sleep',   type: 'emote', name: '졸음',  price: 50,  emoji: '😴' },
+  { id: 'emote_skull',   type: 'emote', name: '해골',  price: 75,  emoji: '💀' },
+  { id: 'emote_clown',   type: 'emote', name: '광대',  price: 100, emoji: '🤡' },
+  { id: 'emote_cry',     type: 'emote', name: '울음',  price: 50,  emoji: '😭' },
+  { id: 'emote_sparkle', type: 'emote', name: '반짝',  price: 75,  emoji: '🤩' },
+  { id: 'emote_cold',    type: 'emote', name: '냉동',  price: 75,  emoji: '🥶' },
+  { id: 'emote_mind',    type: 'emote', name: '폭발',  price: 100, emoji: '🤯' },
+  { id: 'emote_mask',    type: 'emote', name: '마스크', price: 150, emoji: '🎭' },
 ];
 
 export function getItemById(id: string): ShopItem | undefined {
   return SHOP_ITEMS.find(i => i.id === id);
 }
+
+// Default emojis always available (free)
+export const DEFAULT_EMOJIS = ['😎', '🤔', '😂', '😤', '👀'];

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
+import { useAuthStore } from '../store/authStore';
+import { SHOP_ITEMS, DEFAULT_EMOJIS } from '../store/shopItems';
 import './EmojiBar.css';
-
-const EMOJIS = ['😎', '🤔', '😂', '😤', '👀'];
 
 interface FloatingEmoji {
   id: number;
@@ -18,6 +18,13 @@ let emojiIdCounter = 0;
 
 const EmojiBar: React.FC<Props> = ({ onSend, aiEmoji }) => {
   const [floating, setFloating] = useState<FloatingEmoji[]>([]);
+  const ownedItems = useAuthStore(s => s.user?.ownedItems ?? []);
+
+  // Default emojis + purchased emotes
+  const purchasedEmojis = SHOP_ITEMS
+    .filter(item => item.type === 'emote' && ownedItems.includes(item.id))
+    .map(item => item.emoji!);
+  const allEmojis = [...DEFAULT_EMOJIS, ...purchasedEmojis];
 
   const handleClick = (emoji: string) => {
     const id = ++emojiIdCounter;
@@ -43,8 +50,8 @@ const EmojiBar: React.FC<Props> = ({ onSend, aiEmoji }) => {
         ))}
       </div>
       <div className="emoji-buttons">
-        {EMOJIS.map(e => (
-          <button key={e} className="emoji-btn" onClick={() => handleClick(e)}>
+        {allEmojis.map((e, i) => (
+          <button key={i} className="emoji-btn" onClick={() => handleClick(e)}>
             {e}
           </button>
         ))}
