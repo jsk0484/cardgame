@@ -1,0 +1,8 @@
+{
+  "name": "handoof-server",
+  "version": "1.0.0",
+  "scripts": {
+    "build": "cd dev/backend && npm install && npm run build",
+    "start": "node dev/backend/dist/index.js"
+  }
+}
