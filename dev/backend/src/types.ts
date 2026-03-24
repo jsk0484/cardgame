@@ -1,8 +1,8 @@
 export type Suit = 'spade' | 'heart' | 'diamond' | 'club' | 'joker';
 export type Rank = 1|2|3|4|5|6|7|8|9|10|11|12|13 | 'red_joker' | 'black_joker' | 'handoof' | 'nullify';
-export type HandType = 'single' | 'flush' | 'straight' | 'triple' | 'special';
+export type HandType = 'single' | 'flush' | 'straight' | 'triple' | 'straight_flush' | 'special';
 export type RoomStatus = 'waiting' | 'playing' | 'finished';
-export type TurnPhase = 'draw' | 'play' | 'challenge' | 'end';
+export type TurnPhase = 'draw' | 'play' | 'nl_counter' | 'challenge' | 'end';
 
 export interface Card {
   id: string;
@@ -42,4 +42,5 @@ export interface GameRoom {
   lastPlay: PlayedHand | null;
   turnTimer: number;
   timerInterval: ReturnType<typeof setInterval> | null;
+  comboAccum: { [playerId: string]: number };
 }

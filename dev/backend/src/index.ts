@@ -3,9 +3,10 @@ import { createServer } from 'http';
 import { Server } from 'socket.io';
 import cors from 'cors';
 import { buildDeck, dealHands } from './game/deck';
-import { calcRoundScore, applyChallengeScores, determineActualHandType } from './game/scoring';
+import { applyChallengeScores, determineActualHandType, getComboBonus } from './game/scoring';
 import { generateRoomId, getRoom, setRoom, deleteRoom, getPublicWaitingRoom, getAllRooms } from './rooms';
 import { Card, GameRoom, HandType, PlayedHand } from './types';
+import { registerUser, loginUser, getUserByToken, addWin, addCoins } from './users';
 
 const app = express();
 app.use(cors());
@@ -32,10 +33,51 @@ app.get('/rooms', (_, res) => {
   res.json(publicRooms);
 });
 
+// Auth routes
+app.post('/api/register', async (req, res) => {
+  const { username, password, nickname } = req.body;
+  if (!username || !password) return res.status(400).json({ error: 'MISSING_FIELDS' });
+  const result = await registerUser(username, password, nickname || username);
+  if ('error' in result) return res.status(400).json(result);
+  res.json(result);
+});
+
+app.post('/api/login', async (req, res) => {
+  const { username, password } = req.body;
+  if (!username || !password) return res.status(400).json({ error: 'MISSING_FIELDS' });
+  const result = await loginUser(username, password);
+  if ('error' in result) return res.status(401).json(result);
+  res.json(result);
+});
+
+app.get('/api/me', (req, res) => {
+  const token = req.headers.authorization?.replace('Bearer ', '');
+  if (!token) return res.status(401).json({ error: 'NO_TOKEN' });
+  const user = getUserByToken(token);
+  if (!user) return res.status(401).json({ error: 'INVALID_TOKEN' });
+  res.json({ user });
+});
+
+app.post('/api/win', (req, res) => {
+  const token = req.headers.authorization?.replace('Bearer ', '');
+  if (!token) return res.status(401).json({ error: 'NO_TOKEN' });
+  const user = addWin(token);
+  if (!user) return res.status(401).json({ error: 'INVALID_TOKEN' });
+  res.json({ user });
+});
+
+function countMatchesDeclared(count: number, declaredType: HandType): boolean {
+  if (declaredType === 'single') return count === 1;
+  if (declaredType === 'special') return true;
+  return count === 3; // triple, flush, straight
+}
+
 function buildPlayedHand(playerId: string, cards: Card[], declaredType: HandType): PlayedHand {
   const hasRedJoker = cards.some(c => c.rank === 'red_joker');
   const actualType = determineActualHandType(cards);
-  const isBluff = hasRedJoker ? false : declaredType !== actualType;
+  const isBluff = hasRedJoker
+    ? false
+    : !countMatchesDeclared(cards.length, declaredType) || declaredType !== actualType;
   return { playerId, cards, declaredType, actualType, isBluff };
 }
 
@@ -101,12 +143,46 @@ function nextTurn(room: GameRoom) {
   broadcastRoom(room);
 }
 
+function applySpecialEffects(room: GameRoom, playedHand: PlayedHand) {
+  const playerIdx = room.players.findIndex(p => p.id === playedHand.playerId);
+  if (playerIdx < 0) return;
+  const opponentIdx = (playerIdx + 1) % room.players.length;
+  const player = room.players[playerIdx];
+  const opponent = room.players[opponentIdx];
+
+  if (playedHand.cards.some(c => c.rank === 'handoof')) {
+    const tempHand = [...opponent.hand];
+    opponent.hand = player.hand;
+    opponent.handCount = player.hand.length;
+    player.hand = tempHand;
+    player.handCount = tempHand.length;
+  }
+
+  if (playedHand.cards.some(c => c.rank === 'black_joker') && opponent.hand.length > 0) {
+    const stealIdx = Math.floor(Math.random() * opponent.hand.length);
+    const stolen = opponent.hand.splice(stealIdx, 1)[0];
+    opponent.handCount--;
+    player.hand.push(stolen);
+    player.handCount++;
+  }
+}
+
+function applyComboBonus(room: GameRoom) {
+  if (room.lastPlay) {
+    const bonus = getComboBonus(room.lastPlay.declaredType);
+    if (bonus > 0) {
+      const pid = room.lastPlay.playerId;
+      const idx = room.players.findIndex(p => p.id === pid);
+      if (idx >= 0) room.players[idx].score += bonus;
+    }
+  }
+}
+
 function endRound(room: GameRoom) {
   stopTimer(room);
   room.players = room.players.map(p => {
-    const isHandout = p.hand.length === 0;
-    const roundScore = calcRoundScore(p.hand, isHandout);
-    return { ...p, score: p.score + roundScore };
+    const handoutBonus = p.hand.length === 0 ? 5 : 0;
+    return { ...p, score: p.score + handoutBonus };
   });
 
   const nextRound = room.round + 1;
@@ -148,6 +224,32 @@ function endRound(room: GameRoom) {
   }, 1500);
 }
 
+function startNlCounterPhase(room: GameRoom, playedHand: PlayedHand) {
+  room.phase = 'nl_counter';
+  room.lastPlay = playedHand;
+  room.turnTimer = CHALLENGE_TIMER;
+  setRoom(room);
+
+  const opponentIdx = (room.currentTurn + 1) % room.players.length;
+  const opponent = room.players[opponentIdx];
+
+  io.to(room.roomId).emit('nl_opportunity', { playerId: opponent.id });
+  io.to(room.roomId).emit('turn_started', {
+    playerId: opponent.id,
+    phase: 'nl_counter',
+    timer: CHALLENGE_TIMER,
+  });
+
+  startTurnTimer(room, CHALLENGE_TIMER, () => {
+    // Auto skip NL on timeout → apply effects, nextTurn
+    if (room.lastPlay) applySpecialEffects(room, room.lastPlay);
+    setRoom(room);
+    broadcastRoom(room);
+    nextTurn(room);
+  });
+}
+
+
 function startChallengePhase(room: GameRoom, playedHand: PlayedHand) {
   room.phase = 'challenge';
   room.lastPlay = playedHand;
@@ -178,23 +280,60 @@ function startChallengePhase(room: GameRoom, playedHand: PlayedHand) {
 }
 
 function skipChallenge(room: GameRoom) {
+  if (room.phase !== 'challenge') return;
+  room.phase = 'draw';
+  setRoom(room);
   stopTimer(room);
-  nextTurn(room);
-  // Timer will start when the next player draws
+  if (room.lastPlay) {
+    const playerId = room.lastPlay.playerId;
+    const prevScore = room.players.find(p => p.id === playerId)?.score ?? 0;
+    applyComboBonus(room);
+    const newScore = room.players.find(p => p.id === playerId)?.score ?? 0;
+    const scoreDeltas: { [id: string]: number } = {};
+    if (newScore !== prevScore) scoreDeltas[playerId] = newScore - prevScore;
+    // Reveal the played cards briefly before moving on
+    io.to(room.roomId).emit('challenge_result', {
+      success: false,
+      actualType: room.lastPlay.actualType,
+      cards: room.lastPlay.cards,
+      scoreDeltas,
+      noChallenge: true,
+    });
+    setTimeout(() => nextTurn(room), 1200);
+  } else {
+    nextTurn(room);
+  }
 }
 
 function resolveChallenge(room: GameRoom, challengerId: string) {
+  if (room.phase !== 'challenge') return;
+  room.phase = 'draw';
+  setRoom(room);
   stopTimer(room);
   const lastPlay = room.lastPlay!;
   const challengeSuccess = lastPlay.isBluff;
   const blufferId = lastPlay.playerId;
 
+  // combo bonus는 도전 없이 넘어갈 때(skipChallenge)만 적용
   const scoreMap: { [id: string]: number } = {};
   room.players.forEach(p => {
     scoreMap[p.id] = p.score;
   });
-  const newScores = applyChallengeScores(scoreMap, challengerId, blufferId, challengeSuccess);
+  const newScores = applyChallengeScores(scoreMap, challengerId, blufferId, challengeSuccess, lastPlay.declaredType);
   room.players = room.players.map(p => ({ ...p, score: newScores[p.id] ?? p.score }));
+
+  // If challenge succeeds (bluff caught), return bluffer's non-special cards to their hand
+  // AND remove them from the discard pile (they were added there when played)
+  if (challengeSuccess) {
+    const blufferIdx = room.players.findIndex(p => p.id === blufferId);
+    if (blufferIdx >= 0) {
+      const nonSpecialCards = lastPlay.cards.filter(c => !c.isSpecial);
+      const returnedIds = new Set(nonSpecialCards.map(c => c.id));
+      room.discardPile = room.discardPile.filter(c => !returnedIds.has(c.id));
+      room.players[blufferIdx].hand.push(...nonSpecialCards);
+      room.players[blufferIdx].handCount = room.players[blufferIdx].hand.length;
+    }
+  }
 
   const scoreDeltas: { [id: string]: number } = {};
   room.players.forEach(p => {
@@ -285,6 +424,7 @@ io.on('connection', socket => {
       lastPlay: null,
       turnTimer: PLAY_TIMER,
       timerInterval: null,
+      comboAccum: {},
     };
     setRoom(room);
     socket.join(roomId);
@@ -314,6 +454,7 @@ io.on('connection', socket => {
           lastPlay: null,
           turnTimer: PLAY_TIMER,
           timerInterval: null,
+          comboAccum: {},
         };
         setRoom(room);
       }
@@ -414,7 +555,13 @@ io.on('connection', socket => {
     broadcastRoom(room);
 
     startTurnTimer(room, PLAY_TIMER, () => {
-      // Auto pass on timeout
+      // Timeout penalty: -2 points
+      const pIdx = room.players.findIndex(p => p.id === socket.id);
+      if (pIdx >= 0) {
+        room.players[pIdx].score -= 2;
+        setRoom(room);
+        broadcastRoom(room);
+      }
       handlePass(room, socket.id);
     });
   });
@@ -442,6 +589,12 @@ io.on('connection', socket => {
       return;
     }
 
+    const isOneSpecial = validCards.length === 1 && validCards[0].isSpecial;
+    if (!isOneSpecial && validCards.length !== 3) {
+      socket.emit('error', { code: 'INVALID_CARD_COUNT', message: 'Must play 3 cards (or 1 special card)' });
+      return;
+    }
+
     const playedHand = buildPlayedHand(socket.id, validCards, declaredType);
 
     // Remove cards from hand
@@ -449,32 +602,17 @@ io.on('connection', socket => {
     player.handCount = player.hand.length;
     player.passStreak = 0;
 
-    // Handle special effects
-    const hasHandoof = validCards.some(c => c.rank === 'handoof');
     const hasNullify = validCards.some(c => c.rank === 'nullify');
-    const hasBlackJoker = validCards.some(c => c.rank === 'black_joker');
+    const normalCards = validCards.filter(c => !c.isSpecial);
+    room.discardPile.push(...normalCards);
 
-    if (hasHandoof && room.players.length >= 2) {
-      const opponentIdx = (playerIdx + 1) % room.players.length;
-      const tempHand = [...room.players[opponentIdx].hand];
-      room.players[opponentIdx].hand = player.hand;
-      room.players[opponentIdx].handCount = player.hand.length;
-      player.hand = tempHand;
-      player.handCount = tempHand.length;
-    }
-
-    if (hasBlackJoker) {
-      const opponentIdx = (playerIdx + 1) % room.players.length;
-      if (room.players[opponentIdx].hand.length > 0) {
-        const stealIdx = Math.floor(Math.random() * room.players[opponentIdx].hand.length);
-        room.players[opponentIdx].hand.splice(stealIdx, 1);
-        room.players[opponentIdx].handCount--;
+    // NL can only cancel a special card last play
+    const lastHasSpecial = room.lastPlay?.cards.some(c => c.isSpecial) ?? false;
+    if (hasNullify) {
+      if (!room.lastPlay || !lastHasSpecial) {
+        socket.emit('error', { code: 'NL_TARGET_NOT_SPECIAL', message: 'NL은 특수카드 플레이만 무효화할 수 있습니다.' });
+        return;
       }
-    }
-
-    room.discardPile.push(...validCards);
-
-    if (hasNullify && room.lastPlay) {
       room.drawPile.push(...room.lastPlay.cards);
       room.lastPlay = null;
       setRoom(room);
@@ -498,6 +636,31 @@ io.on('connection', socket => {
       return;
     }
 
+    const opponentIdx = (playerIdx + 1) % room.players.length;
+
+    // Special card (HF/BJ/RJ): give opponent NL counter opportunity; effects deferred
+    if (isOneSpecial) {
+      const opponentHasNL = room.players[opponentIdx]?.hand.some(c => c.rank === 'nullify');
+      setRoom(room);
+      // Special cards: reveal immediately (no bluff possible)
+      io.to(room.roomId).emit('cards_played', { playedHand: {
+        playerId: playedHand.playerId,
+        cardCount: playedHand.cards.length,
+        declaredType: playedHand.declaredType,
+        cards: playedHand.cards,
+      }});
+      if (opponentHasNL) {
+        startNlCounterPhase(room, playedHand);
+      } else {
+        applySpecialEffects(room, playedHand);
+        setRoom(room);
+        broadcastRoom(room);
+        setTimeout(() => nextTurn(room), 600);
+      }
+      return;
+    }
+
+    // Regular 3-card play: go to challenge
     startChallengePhase(room, playedHand);
   });
 
@@ -524,6 +687,42 @@ io.on('connection', socket => {
     const room = findPlayerRoom(socket.id);
     if (!room || room.phase !== 'challenge') return;
     skipChallenge(room);
+  });
+
+  socket.on('use_nl', () => {
+    const room = findPlayerRoom(socket.id);
+    if (!room || room.phase !== 'nl_counter') return;
+    if (!room.lastPlay) return;
+
+    // Find this player and remove their NL card
+    const playerIdx = room.players.findIndex(p => p.id === socket.id);
+    if (playerIdx < 0) return;
+    const nlCardIdx = room.players[playerIdx].hand.findIndex(c => c.rank === 'nullify');
+    if (nlCardIdx < 0) return;
+
+    stopTimer(room);
+    room.players[playerIdx].hand.splice(nlCardIdx, 1);
+    room.players[playerIdx].handCount--;
+
+    // Return the cancelled cards to the draw pile
+    room.drawPile.push(...room.lastPlay.cards);
+    room.lastPlay = null;
+    setRoom(room);
+
+    io.to(room.roomId).emit('nl_used', {});
+    setTimeout(() => nextTurn(room), 800);
+  });
+
+  socket.on('skip_nl', () => {
+    const room = findPlayerRoom(socket.id);
+    if (!room || room.phase !== 'nl_counter') return;
+    if (!room.lastPlay) return;
+    stopTimer(room);
+    // Apply deferred special effects, then nextTurn
+    applySpecialEffects(room, room.lastPlay);
+    setRoom(room);
+    broadcastRoom(room);
+    setTimeout(() => nextTurn(room), 400);
   });
 
   socket.on('send_emoji', ({ emoji }: { emoji: string }) => {

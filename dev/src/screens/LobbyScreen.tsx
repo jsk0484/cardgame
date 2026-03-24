@@ -13,6 +13,7 @@ const LobbyScreen: React.FC<LobbyScreenProps> = ({ onSinglePlayer }) => {
   const [inputNick, setInputNick] = useState(nickname);
 
   const handleNick = () => setNickname(inputNick.trim() || 'Player');
+  const nickOk = inputNick.trim().length > 0;
 
   const handleQuickMatch = () => {
     handleNick();
@@ -56,13 +57,13 @@ const LobbyScreen: React.FC<LobbyScreenProps> = ({ onSinglePlayer }) => {
         </div>
 
         <div className="lobby-actions">
-          <button className="btn btn-primary btn-large" onClick={handleQuickMatch}>
+          <button className="btn btn-primary btn-large" onClick={handleQuickMatch} disabled={!nickOk}>
             Quick Match
           </button>
 
           <div className="lobby-divider">or</div>
 
-          <button className="btn btn-secondary" onClick={handleCreate}>
+          <button className="btn btn-secondary" onClick={handleCreate} disabled={!nickOk}>
             + Create Private Room
           </button>
 
@@ -76,7 +77,7 @@ const LobbyScreen: React.FC<LobbyScreenProps> = ({ onSinglePlayer }) => {
               onKeyDown={e => e.key === 'Enter' && handleJoin()}
             />
             <button
-              className="btn btn-secondary"
+              className="btn btn-secondary btn-join"
               onClick={handleJoin}
               disabled={roomCode.length !== 6}
             >

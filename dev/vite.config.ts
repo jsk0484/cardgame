@@ -1,7 +1,14 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import fs from 'fs'
 
-// https://vite.dev/config/
+const buildVersionPlugin = () => ({
+  name: 'build-version',
+  buildStart() {
+    fs.writeFileSync('./public/version.json', JSON.stringify({ v: Date.now() }));
+  },
+});
+
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), buildVersionPlugin()],
 })

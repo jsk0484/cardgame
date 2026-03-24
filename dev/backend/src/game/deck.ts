@@ -31,10 +31,10 @@ export function buildDeck(): Card[] {
   }
 
   // Jokers
-  cards.push({ id: makeId('joker_red'), suit: 'joker', rank: 'red_joker', isSpecial: false });
-  cards.push({ id: makeId('joker_red'), suit: 'joker', rank: 'red_joker', isSpecial: false });
-  cards.push({ id: makeId('joker_black'), suit: 'joker', rank: 'black_joker', isSpecial: false });
-  cards.push({ id: makeId('joker_black'), suit: 'joker', rank: 'black_joker', isSpecial: false });
+  cards.push({ id: makeId('joker_red'), suit: 'joker', rank: 'red_joker', isSpecial: true });
+  cards.push({ id: makeId('joker_red'), suit: 'joker', rank: 'red_joker', isSpecial: true });
+  cards.push({ id: makeId('joker_black'), suit: 'joker', rank: 'black_joker', isSpecial: true });
+  cards.push({ id: makeId('joker_black'), suit: 'joker', rank: 'black_joker', isSpecial: true });
 
   // Special
   cards.push({ id: makeId('special_handoof'), suit: 'joker', rank: 'handoof', isSpecial: true });

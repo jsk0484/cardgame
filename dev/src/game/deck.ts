@@ -25,10 +25,10 @@ export function buildDeck(): Card[] {
   }
 
   // 2 red jokers + 2 black jokers
-  deck.push({ id: makeId(), suit: 'joker', rank: 'red_joker', isSpecial: false });
-  deck.push({ id: makeId(), suit: 'joker', rank: 'red_joker', isSpecial: false });
-  deck.push({ id: makeId(), suit: 'joker', rank: 'black_joker', isSpecial: false });
-  deck.push({ id: makeId(), suit: 'joker', rank: 'black_joker', isSpecial: false });
+  deck.push({ id: makeId(), suit: 'joker', rank: 'red_joker', isSpecial: true });
+  deck.push({ id: makeId(), suit: 'joker', rank: 'red_joker', isSpecial: true });
+  deck.push({ id: makeId(), suit: 'joker', rank: 'black_joker', isSpecial: true });
+  deck.push({ id: makeId(), suit: 'joker', rank: 'black_joker', isSpecial: true });
 
   // 2 handoof + 2 nullify
   deck.push({ id: makeId(), suit: 'joker', rank: 'handoof', isSpecial: true });

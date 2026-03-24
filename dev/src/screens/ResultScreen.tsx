@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { useGameStore } from '../store/gameStore';
 import { useLangStore } from '../store/langStore';
+import { useAuthStore } from '../store/authStore';
 import './ResultScreen.css';
 
 const ResultScreen: React.FC = () => {
@@ -9,11 +10,20 @@ const ResultScreen: React.FC = () => {
   const playAgain = useGameStore(s => s.playAgain);
   const setNickname = useGameStore(s => s.setNickname);
   const t = useLangStore(s => s.t);
+  const { user, recordWin } = useAuthStore();
+  const recordedRef = useRef(false);
 
   const human = players[0];
   const ai = players[1];
   const humanWon = human.score > ai.score;
   const tie = human.score === ai.score;
+
+  useEffect(() => {
+    if (humanWon && user && !recordedRef.current) {
+      recordedRef.current = true;
+      recordWin();
+    }
+  }, []);
 
   const sorted = [...players].sort((a, b) => b.score - a.score);
 
@@ -53,6 +63,12 @@ const ResultScreen: React.FC = () => {
                 ? t.won_by(human.score - ai.score)
                 : t.lost_by(ai.score - human.score)}
             </p>
+          )}
+          {humanWon && user && (
+            <div className="result-reward">★ +50 코인 획득! (총 {user.coins}코인)</div>
+          )}
+          {humanWon && !user && (
+            <div className="result-reward-hint">로그인하면 승리 기록과 코인이 저장됩니다</div>
           )}
         </div>
 

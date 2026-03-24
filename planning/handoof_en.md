@@ -183,15 +183,19 @@ WAITING ──(all ready)──► PLAYING
 
 Scores are calculated **server-side** at round end and broadcast to all clients.
 
+> **Design principle**: Empty your hand fast — remaining cards are a penalty.
+
 ```ts
 function calcRoundScore(player: Player, isHandout: boolean): number {
   const hand = player.hand;
-  let score = hand.reduce((sum, c) => sum + getCardValue(c), 0);
+
+  // Remaining cards are a penalty (negative)
+  let score = -hand.reduce((sum, c) => sum + getCardValue(c), 0);
 
   if (isFlush(hand))    score += 5;   // 3+ cards of the same suit
   if (isStraight(hand)) score += 5;   // 3+ consecutive ranks
   if (isTriple(hand))   score += 8;   // 3 cards of the same rank
-  if (isHandout)        score += 10;  // first player to empty their hand
+  if (isHandout)        score += 10;  // first to empty hand
 
   return score;
 }
@@ -202,6 +206,14 @@ function getCardValue(card: Card): number {
   return Number(card.rank); // A=1, J=11, Q=12, K=13
 }
 ```
+
+**Examples:**
+
+| Situation | Calculation | Score |
+|-----------|-------------|-------|
+| Empty hand first (handout) | 0 penalty + 10 bonus | **+10** |
+| Holding K, Q, J at round end | -(13+12+11) = -36 | **-36** |
+| Holding flush ♠3,♠5,♠7 at round end | -(3+5+7) + 5 flush = -10 | **-10** |
 
 **Challenge scores** (applied immediately):
 

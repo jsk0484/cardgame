@@ -8,7 +8,14 @@ export const TOTAL_ROUNDS = 3;
 export const INITIAL_HAND_SIZE = 7;
 
 export function canPlay(cards: Card[]): boolean {
-  return cards.length >= 1 && cards.length <= 3;
+  if (cards.length === 1) return cards[0].isSpecial; // 1장은 특수카드만
+  return cards.length === 3;
+}
+
+function countMatchesDeclared(count: number, declaredType: HandType): boolean {
+  if (declaredType === 'single') return count === 1;
+  if (declaredType === 'special') return true;
+  return count === 3; // triple, flush, straight
 }
 
 export function buildPlayedHand(
@@ -18,7 +25,9 @@ export function buildPlayedHand(
 ): PlayedHand {
   const hasRedJoker = cards.some(c => c.rank === 'red_joker');
   const actualType = determineActualHandType(cards);
-  const isBluff = hasRedJoker ? false : declaredType !== actualType;
+  const isBluff = hasRedJoker
+    ? false
+    : !countMatchesDeclared(cards.length, declaredType) || declaredType !== actualType;
   return { playerId, cards, declaredType, actualType, isBluff };
 }
 

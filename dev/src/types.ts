@@ -20,7 +20,7 @@ export interface Player {
   isConnected: boolean;
 }
 
-export type HandType = 'single' | 'flush' | 'straight' | 'triple' | 'special';
+export type HandType = 'single' | 'flush' | 'straight' | 'triple' | 'straight_flush' | 'special';
 
 export interface PlayedHand {
   playerId: string;
@@ -30,7 +30,7 @@ export interface PlayedHand {
   isBluff: boolean;
 }
 
-export type GamePhase = 'draw' | 'play' | 'challenge' | 'end';
+export type GamePhase = 'draw' | 'play' | 'nl_counter' | 'challenge' | 'end';
 export type GameScreen = 'main' | 'game' | 'result';
 
 export interface GameState {
@@ -56,4 +56,18 @@ export interface ChallengeResult {
   challengerId: string;
   blufferId: string;
   message: string;
+}
+
+export interface PlayLogEntry {
+  id: number;
+  round: number;
+  playerName: string;
+  declaredType: string;
+  cardCount: number;
+  cards: Card[];
+  challenged: boolean | null;
+  challengeSuccess: boolean | null;
+  delta: number | null;
+  // Score changes for all affected players
+  deltas?: Array<{ name: string; delta: number }>;
 }

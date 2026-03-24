@@ -1,5 +1,8 @@
 import { create } from 'zustand';
-import type { GameState, Card, HandType, Player } from '../types';
+import { useLangStore } from './langStore';
+import type { GameState, Card, HandType, Player, PlayLogEntry } from '../types';
+
+const t = () => useLangStore.getState().t;
 import type { ChallengeResult } from '../types';
 import { buildDeck, dealHands } from '../game/deck';
 import {
@@ -13,7 +16,7 @@ import {
   MAX_PASS_STREAK,
   getWinner,
 } from '../game/gameLogic';
-import { applyChallengeScores, calcRoundScore } from '../game/scoring';
+import { applyChallengeScores, getComboBonus } from '../game/scoring';
 import { aiChooseDrawSource, aiChoosePlay, aiShouldChallenge } from '../game/ai';
 
 function makePlayer(id: string, nickname: string): Player {
@@ -38,6 +41,8 @@ interface GameStore extends GameState {
   pass: () => void;
   challenge: () => void;
   skipChallenge: () => void;
+  useNullify: () => void;
+  skipNullify: () => void;
   tickTimer: () => void;
   playAgain: () => void;
   aiTakeTurn: () => void;
@@ -46,6 +51,9 @@ interface GameStore extends GameState {
   _afterChallenge: () => void;
   _resolveChallenge: (challengerId: string, blufferId: string) => void;
   _endRound: () => void;
+  _applySpecialAndNext: () => void;
+  playLog: PlayLogEntry[];
+  comboAccum: { [playerId: string]: number };
 }
 
 const HUMAN_IDX = 0;
@@ -70,6 +78,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
   gameWinner: null,
   message: '',
   challengeResult: null,
+  playLog: [],
+  comboAccum: {},
 
   setNickname: (name: string) => {
     set(state => {
@@ -95,8 +105,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
       declaredHandType: 'single' as HandType,
       roundWinner: null,
       gameWinner: null,
-      message: 'Draw a card to start your turn.',
+      message: t().msg_draw_start,
       challengeResult: null,
+      playLog: [],
       players: state.players.map((p, i) => ({
         ...p,
         hand: hands[i],
@@ -121,7 +132,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       newDiscardPile = newDiscardPile.slice(0, -1);
     } else {
       if (newDrawPile.length === 0) {
-        set({ message: 'Draw pile empty! Round over.' });
+        set({ message: t().msg_draw_empty });
         get()._endRound();
         return;
       }
@@ -143,7 +154,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       players,
       phase: 'play',
       timer: PLAY_TIMER,
-      message: 'Select 1-3 cards to play, or pass.',
+      message: t().msg_select_play,
     });
   },
 
@@ -171,44 +182,33 @@ export const useGameStore = create<GameStore>((set, get) => ({
     const human = { ...players[HUMAN_IDX] };
     const playedCards = human.hand.filter(c => state.selectedCards.includes(c.id));
     if (playedCards.length === 0) return;
+    // 1장은 특수카드만, 일반 카드는 반드시 3장
+    if (playedCards.length === 1 && !playedCards[0].isSpecial) return;
+    if (playedCards.length === 2) return;
 
-    const playedHand = buildPlayedHand('human', playedCards, state.declaredHandType);
+    const declaredType = playedCards.length === 1 && playedCards[0].isSpecial ? 'special' as HandType : state.declaredHandType;
+    const playedHand = buildPlayedHand('human', playedCards, declaredType);
+    const logEntry: PlayLogEntry = {
+      id: Date.now(),
+      round: state.round,
+      playerName: state.players[HUMAN_IDX].nickname,
+      declaredType: declaredType,
+      cardCount: playedCards.length,
+      cards: playedCards,
+      challenged: null,
+      challengeSuccess: null,
+      delta: null,
+    };
     human.hand = human.hand.filter(c => !state.selectedCards.includes(c.id));
     human.handCount = human.hand.length;
     human.passStreak = 0;
     players[HUMAN_IDX] = human;
 
-    // Handle special card effects
-    const hasHandoof = playedCards.some(c => c.rank === 'handoof');
     const hasNullify = playedCards.some(c => c.rank === 'nullify');
-    const hasBlackJoker = playedCards.some(c => c.rank === 'black_joker');
-
-    if (hasHandoof) {
-      // Swap hands with AI
-      const tempHand = [...players[AI_IDX].hand];
-      const newAi = { ...players[AI_IDX], hand: human.hand, handCount: human.hand.length };
-      const newHuman = { ...human, hand: tempHand, handCount: tempHand.length };
-      players[HUMAN_IDX] = newHuman;
-      players[AI_IDX] = newAi;
-      // Update human reference for shouldEndRound check
-      human.hand = tempHand;
-    }
-
-    if (hasNullify && state.lastPlay) {
-      // Invalidate lastPlay: put those cards at bottom of draw pile
-      // We'll handle this in the set call below
-    }
-
-    if (hasBlackJoker && players[AI_IDX].hand.length > 0) {
-      // Steal 1 random card from AI
-      const aiHandCopy = [...players[AI_IDX].hand];
-      const stealIdx = Math.floor(Math.random() * aiHandCopy.length);
-      const stolenCard = aiHandCopy.splice(stealIdx, 1)[0];
-      players[AI_IDX] = { ...players[AI_IDX], hand: aiHandCopy, handCount: aiHandCopy.length };
-      players[HUMAN_IDX] = { ...players[HUMAN_IDX], hand: [...players[HUMAN_IDX].hand, stolenCard], handCount: players[HUMAN_IDX].hand.length + 1 };
-    }
-
-    const newDiscardPile = [...state.discardPile, ...playedCards];
+    // Only HF/BJ have actual effects that NL can counter; RJ is just a wildcard in combos
+    const hasEffectSpecial = playedCards.some(c => c.rank === 'handoof' || c.rank === 'black_joker');
+    const normalPlayedCards = playedCards.filter(c => !c.isSpecial);
+    const newDiscardPile = [...state.discardPile, ...normalPlayedCards];
     const roundEnded = shouldEndRound(human.hand, state.drawPile);
 
     if (roundEnded) {
@@ -218,13 +218,20 @@ export const useGameStore = create<GameStore>((set, get) => ({
         lastPlay: playedHand,
         selectedCards: [],
         phase: 'end',
-        message: `${human.nickname} played their last card(s)! Round over.`,
+        message: t().msg_human_round_over(human.nickname),
+        playLog: [...state.playLog, logEntry],
       });
       setTimeout(() => get()._endRound(), 1000);
       return;
     }
 
+    // NL: can only cancel a special card last play
     if (hasNullify) {
+      const lastHasSpecial = state.lastPlay?.cards.some(c => c.isSpecial) ?? false;
+      if (!lastHasSpecial) {
+        set({ message: 'NL은 특수카드 플레이만 무효화할 수 있습니다.' });
+        return;
+      }
       const nullifiedCards = state.lastPlay ? state.lastPlay.cards : [];
       set({
         players,
@@ -234,12 +241,55 @@ export const useGameStore = create<GameStore>((set, get) => ({
         selectedCards: [],
         phase: 'draw',
         timer: PLAY_TIMER,
-        message: 'Nullify! Previous play is cancelled.',
+        message: t().msg_nullify_cancel,
+        playLog: [...state.playLog, logEntry],
       });
       get()._nextTurn();
       return;
     }
 
+    // HF/BJ special effect cards: NL counter opportunity (RJ is just a wildcard, no effect to counter)
+    if (hasEffectSpecial) {
+      const aiHasNL = players[AI_IDX].hand.some(c => c.rank === 'nullify');
+      if (aiHasNL) {
+        set({
+          players, discardPile: newDiscardPile, lastPlay: playedHand, selectedCards: [],
+          phase: 'nl_counter', timer: CHALLENGE_TIMER,
+          message: t().msg_ai_nullify_deciding,
+          playLog: [...state.playLog, logEntry],
+        });
+        setTimeout(() => {
+          const s = get();
+          if (s.phase !== 'nl_counter') return;
+          if (Math.random() < 0.35) {
+            // AI uses NL: return special card to human, no effects
+            const nlCard = s.players[AI_IDX].hand.find(c => c.rank === 'nullify')!;
+            const updPl = s.players.map((p, i) => {
+              if (i === AI_IDX) { const h = p.hand.filter(c => c.id !== nlCard.id); return { ...p, hand: h, handCount: h.length }; }
+              if (i === HUMAN_IDX) { const h = [...p.hand, ...s.lastPlay!.cards]; return { ...p, hand: h, handCount: p.hand.length + s.lastPlay!.cards.length }; }
+              return p;
+            });
+            set({ players: updPl, lastPlay: null, phase: 'draw', timer: 0, message: t().msg_ai_nullify_used });
+            get()._nextTurn();
+          } else {
+            // AI skips: apply HF/BJ effects now, then nextTurn
+            get()._applySpecialAndNext();
+          }
+        }, 1500);
+      } else {
+        // No AI NL: apply effects immediately
+        set({
+          players, discardPile: newDiscardPile, lastPlay: playedHand, selectedCards: [],
+          phase: 'draw', timer: PLAY_TIMER,
+          message: t().msg_special_played,
+          playLog: [...state.playLog, logEntry],
+        });
+        get()._applySpecialAndNext();
+      }
+      return;
+    }
+
+    // Regular 3-card play: go directly to challenge (no NL counter)
     set({
       players,
       discardPile: newDiscardPile,
@@ -247,19 +297,15 @@ export const useGameStore = create<GameStore>((set, get) => ({
       selectedCards: [],
       phase: 'challenge',
       timer: CHALLENGE_TIMER,
-      message: `You played ${playedCards.length} card(s) as "${state.declaredHandType}". AI can challenge...`,
+      message: (() => { const tr = t(); return tr.msg_you_played(playedCards.length, tr.hand_types[declaredType as keyof typeof tr.hand_types] ?? declaredType); })(),
+      playLog: [...state.playLog, logEntry],
     });
 
-    // AI challenge decision after brief delay
     setTimeout(() => {
       const s = get();
       if (s.phase !== 'challenge') return;
-      const shouldChallenge = aiShouldChallenge(s.lastPlay);
-      if (shouldChallenge) {
-        get()._resolveChallenge('ai', 'human');
-      } else {
-        get()._afterChallenge();
-      }
+      if (aiShouldChallenge(s.lastPlay)) get()._resolveChallenge('ai', 'human');
+      else get().skipChallenge();
     }, 1500);
   },
 
@@ -286,6 +332,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
   challenge: () => {
     const state = get();
     if (state.phase !== 'challenge') return;
+    set({ phase: 'draw', timer: 0 }); // lock immediately to prevent double-click
     if (state.lastPlay && state.lastPlay.playerId === 'ai') {
       get()._resolveChallenge('human', 'ai');
     }
@@ -294,7 +341,65 @@ export const useGameStore = create<GameStore>((set, get) => ({
   skipChallenge: () => {
     const state = get();
     if (state.phase !== 'challenge') return;
-    get()._afterChallenge();
+    // Briefly reveal the played cards before moving on
+    if (state.lastPlay) {
+      const blufferName = state.players.find(p => p.id === state.lastPlay!.playerId)?.nickname ?? '';
+      const wasBluff = state.lastPlay.isBluff;
+      const result: ChallengeResult = {
+        success: false,
+        challengerId: '',
+        blufferId: state.lastPlay.playerId,
+        message: wasBluff
+          ? `No challenge — ${blufferName} was bluffing!`
+          : `No challenge — ${blufferName} was honest.`,
+      };
+      // 패스 시 선언 조합 점수 적용
+      const bonus = getComboBonus(state.lastPlay.declaredType);
+      let players = state.players;
+      if (bonus > 0) {
+        players = players.map(p =>
+          p.id === state.lastPlay!.playerId ? { ...p, score: p.score + bonus } : p
+        );
+      }
+      // 로그에 점수 변화 기록
+      const passLog = [...state.playLog];
+      if (passLog.length > 0 && bonus > 0) {
+        passLog[passLog.length - 1] = {
+          ...passLog[passLog.length - 1],
+          deltas: [{ name: blufferName, delta: bonus }],
+        };
+      }
+      // phase와 challengeResult를 한 번에 set → 중간 렌더 없이 canDraw 방지
+      set({ phase: 'draw', timer: 0, players, challengeResult: result, message: result.message, playLog: passLog });
+      setTimeout(() => get()._afterChallenge(), 1200);
+    } else {
+      get()._afterChallenge();
+    }
+  },
+
+  useNullify: () => {
+    // Human uses NL to cancel AI's special card play
+    const state = get();
+    if (state.phase !== 'nl_counter') return;
+    if (!state.lastPlay || state.lastPlay.playerId !== 'ai') return;
+    const nlCard = state.players[HUMAN_IDX].hand.find(c => c.rank === 'nullify');
+    if (!nlCard) return;
+    // Remove NL from human hand; return AI's special cards to AI hand
+    const returnedCards = state.lastPlay.cards;
+    const players = state.players.map((p, i) => {
+      if (i === HUMAN_IDX) { const h = p.hand.filter(c => c.id !== nlCard.id); return { ...p, hand: h, handCount: h.length }; }
+      if (i === AI_IDX) { const h = [...p.hand, ...returnedCards]; return { ...p, hand: h, handCount: h.length }; }
+      return p;
+    });
+    set({ players, lastPlay: null, phase: 'draw', timer: 0, selectedCards: [], message: "Nullify! AI's special card is cancelled." });
+    get()._nextTurn();
+  },
+
+  skipNullify: () => {
+    // Human skips NL: apply AI's special effects then nextTurn
+    const state = get();
+    if (state.phase !== 'nl_counter') return;
+    get()._applySpecialAndNext();
   },
 
   tickTimer: () => {
@@ -304,12 +409,19 @@ export const useGameStore = create<GameStore>((set, get) => ({
     if (newTimer <= 0) {
       if (state.phase === 'play') {
         if (state.currentTurn === HUMAN_IDX) {
-          set({ timer: 0, message: 'Time up! Auto-passing.' });
+          // Timeout penalty: -2 points
+          const players = state.players.map((p, i) =>
+            i === HUMAN_IDX ? { ...p, score: p.score - 2 } : p
+          );
+          set({ timer: 0, players, message: t().msg_timeout });
           get().pass();
         }
       } else if (state.phase === 'challenge') {
         set({ timer: 0 });
         get().skipChallenge();
+      } else if (state.phase === 'nl_counter') {
+        set({ timer: 0 });
+        get().skipNullify();
       }
     } else {
       set({ timer: newTimer });
@@ -356,7 +468,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       drawPile: newDrawPile,
       discardPile: newDiscardPile,
       players,
-      message: 'AI is thinking...',
+      message: t().ai_thinking,
     });
 
     setTimeout(() => {
@@ -374,12 +486,23 @@ export const useGameStore = create<GameStore>((set, get) => ({
           updatedAi.passStreak = 0;
         }
         updatedPlayers[AI_IDX] = updatedAi;
-        set({ players: updatedPlayers, message: 'AI passed.' });
+        set({ players: updatedPlayers, message: t().msg_ai_passed });
         get()._nextTurn();
         return;
       }
 
       const playedHand = buildPlayedHand('ai', aiDecision.cards, aiDecision.declaredType);
+      const aiLogEntry: PlayLogEntry = {
+        id: Date.now() + 1,
+        round: s.round,
+        playerName: s.players[AI_IDX].nickname,
+        declaredType: aiDecision.declaredType,
+        cardCount: aiDecision.cards.length,
+        cards: aiDecision.cards,
+        challenged: null,
+        challengeSuccess: null,
+        delta: null,
+      };
       const updatedPlayers = [...s.players];
       const updatedAi = { ...updatedPlayers[AI_IDX] };
       updatedAi.hand = updatedAi.hand.filter(c => !aiDecision.cards.find(pc => pc.id === c.id));
@@ -387,27 +510,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
       updatedAi.passStreak = 0;
       updatedPlayers[AI_IDX] = updatedAi;
 
-      // Handle special card effects for AI
-      const aiHasBlackJoker = aiDecision.cards.some(c => c.rank === 'black_joker');
-      if (aiHasBlackJoker && updatedPlayers[HUMAN_IDX].hand.length > 0) {
-        const humanHandCopy = [...updatedPlayers[HUMAN_IDX].hand];
-        const stealIdx = Math.floor(Math.random() * humanHandCopy.length);
-        const stolenCard = humanHandCopy.splice(stealIdx, 1)[0];
-        updatedPlayers[HUMAN_IDX] = { ...updatedPlayers[HUMAN_IDX], hand: humanHandCopy, handCount: humanHandCopy.length };
-        updatedPlayers[AI_IDX] = { ...updatedPlayers[AI_IDX], hand: [...updatedPlayers[AI_IDX].hand, stolenCard], handCount: updatedPlayers[AI_IDX].hand.length + 1 };
-      }
-
-      const aiHasHandoof = aiDecision.cards.some(c => c.rank === 'handoof');
-      if (aiHasHandoof) {
-        const humanHand = [...updatedPlayers[HUMAN_IDX].hand];
-        const aiHandAfterPlay = [...updatedPlayers[AI_IDX].hand];
-        updatedPlayers[HUMAN_IDX] = { ...updatedPlayers[HUMAN_IDX], hand: aiHandAfterPlay, handCount: aiHandAfterPlay.length };
-        updatedPlayers[AI_IDX] = { ...updatedPlayers[AI_IDX], hand: humanHand, handCount: humanHand.length };
-      }
-
       const aiHasNullify = aiDecision.cards.some(c => c.rank === 'nullify');
 
-      const newDiscard = [...s.discardPile, ...aiDecision.cards];
+      const normalAiCards = aiDecision.cards.filter(c => !c.isSpecial);
+      const newDiscard = [...s.discardPile, ...normalAiCards];
       const roundEnded = shouldEndRound(updatedPlayers[AI_IDX].hand, s.drawPile);
 
       if (roundEnded) {
@@ -416,13 +522,16 @@ export const useGameStore = create<GameStore>((set, get) => ({
           discardPile: newDiscard,
           lastPlay: playedHand,
           phase: 'end',
-          message: 'AI played their last card(s)! Round over.',
+          message: t().msg_ai_round_over,
+          playLog: [...s.playLog, aiLogEntry],
         });
         setTimeout(() => get()._endRound(), 1000);
         return;
       }
 
-      if (aiHasNullify) {
+      // AI NL: only cancel if last play contained a special card
+      const lastHasSpecial = s.lastPlay?.cards.some(c => c.isSpecial) ?? false;
+      if (aiHasNullify && lastHasSpecial) {
         const nullifiedCards = s.lastPlay ? s.lastPlay.cards : [];
         set({
           players: updatedPlayers,
@@ -431,51 +540,120 @@ export const useGameStore = create<GameStore>((set, get) => ({
           drawPile: [...s.drawPile, ...nullifiedCards],
           phase: 'draw',
           timer: PLAY_TIMER,
-          message: 'AI played Nullify! Previous play is cancelled.',
+          message: t().msg_ai_nullify_played,
+          playLog: [...s.playLog, aiLogEntry],
         });
         get()._nextTurn();
         return;
       }
 
+      // HF/BJ special effect cards: NL counter opportunity for human (RJ is wildcard, no effect to counter)
+      const aiPlayedEffectSpecial = aiDecision.cards.some(c => c.rank === 'handoof' || c.rank === 'black_joker');
+      if (aiPlayedEffectSpecial) {
+        const humanHasNL = updatedPlayers[HUMAN_IDX].hand.some(c => c.rank === 'nullify');
+        if (humanHasNL) {
+          set({
+            players: updatedPlayers, discardPile: newDiscard, lastPlay: playedHand,
+            phase: 'nl_counter', timer: CHALLENGE_TIMER,
+            message: t().msg_ai_special,
+            playLog: [...s.playLog, aiLogEntry],
+          });
+        } else {
+          set({
+            players: updatedPlayers, discardPile: newDiscard, lastPlay: playedHand,
+            phase: 'draw', timer: PLAY_TIMER,
+            message: t().msg_ai_special_no_nl,
+            playLog: [...s.playLog, aiLogEntry],
+          });
+          get()._applySpecialAndNext();
+        }
+        return;
+      }
+
+      // Regular 3-card play: go directly to challenge
       set({
         players: updatedPlayers,
         discardPile: newDiscard,
         lastPlay: playedHand,
         phase: 'challenge',
         timer: CHALLENGE_TIMER,
-        message: `AI played ${aiDecision.cards.length} card(s) as "${aiDecision.declaredType}". Challenge?`,
+        message: (() => { const tr = t(); return tr.msg_ai_played(aiDecision.cards.length, tr.hand_types[aiDecision.declaredType as keyof typeof tr.hand_types] ?? aiDecision.declaredType); })(),
+        playLog: [...s.playLog, aiLogEntry],
       });
     }, 1200);
+  },
+
+  _applySpecialAndNext: () => {
+    // Apply deferred HF/BJ effects from lastPlay, then go to nextTurn
+    const state = get();
+    if (!state.lastPlay) { get()._nextTurn(); return; }
+    const cards = state.lastPlay.cards;
+    const playerId = state.lastPlay.playerId;
+    const playerIdx = playerId === 'human' ? HUMAN_IDX : AI_IDX;
+    const opponentIdx = playerIdx === HUMAN_IDX ? AI_IDX : HUMAN_IDX;
+    let players = [...state.players];
+
+    const hasHandoof = cards.some(c => c.rank === 'handoof');
+    const hasBlackJoker = cards.some(c => c.rank === 'black_joker');
+
+    if (hasHandoof) {
+      const tempHand = [...players[opponentIdx].hand];
+      players[opponentIdx] = { ...players[opponentIdx], hand: players[playerIdx].hand, handCount: players[playerIdx].hand.length };
+      players[playerIdx] = { ...players[playerIdx], hand: tempHand, handCount: tempHand.length };
+    }
+
+    if (hasBlackJoker && players[opponentIdx].hand.length > 0) {
+      const handCopy = [...players[opponentIdx].hand];
+      const stealIdx = Math.floor(Math.random() * handCopy.length);
+      const stolen = handCopy.splice(stealIdx, 1)[0];
+      players[opponentIdx] = { ...players[opponentIdx], hand: handCopy, handCount: handCopy.length };
+      players[playerIdx] = { ...players[playerIdx], hand: [...players[playerIdx].hand, stolen], handCount: players[playerIdx].hand.length + 1 };
+    }
+
+    set({ players });
+    get()._nextTurn();
   },
 
   _nextTurn: () => {
     const state = get();
     const nextTurn = getNextTurn(state.currentTurn, state.players.length);
+    const playLog = [...state.playLog];
+    if (playLog.length > 0 && playLog[playLog.length - 1].challenged === null) {
+      playLog[playLog.length - 1] = { ...playLog[playLog.length - 1], challenged: false };
+    }
     set({
       currentTurn: nextTurn,
       phase: 'draw',
       timer: PLAY_TIMER,
       selectedCards: [],
       challengeResult: null,
+      playLog,
     });
 
     if (nextTurn === AI_IDX) {
       setTimeout(() => get().aiTakeTurn(), 800);
     } else {
-      set({ message: 'Your turn! Draw a card.' });
+      set({ message: t().msg_your_turn });
     }
   },
 
   _afterChallenge: () => {
     const state = get();
     const nextTurn = getNextTurn(state.currentTurn, state.players.length);
+    const playLog = [...state.playLog];
+    if (playLog.length > 0 && playLog[playLog.length - 1].challenged === null) {
+      playLog[playLog.length - 1] = { ...playLog[playLog.length - 1], challenged: false };
+    }
+
     set({
+      players: state.players,
       currentTurn: nextTurn,
       phase: 'draw',
       timer: PLAY_TIMER,
       selectedCards: [],
       challengeResult: null,
-      message: nextTurn === HUMAN_IDX ? 'Your turn! Draw a card.' : "AI's turn...",
+      message: nextTurn === HUMAN_IDX ? t().msg_your_turn : t().ai_thinking,
+      playLog,
     });
 
     if (nextTurn === AI_IDX) {
@@ -493,37 +671,76 @@ export const useGameStore = create<GameStore>((set, get) => ({
     const scoreMap: { [id: string]: number } = {};
     state.players.forEach(p => { scoreMap[p.id] = p.score; });
 
-    const newScores = applyChallengeScores(scoreMap, challengerId, blufferId, challengeSuccess);
+    const newScores = applyChallengeScores(scoreMap, challengerId, blufferId, challengeSuccess, lastPlay.declaredType);
 
-    const players = state.players.map(p => ({
+    let players = state.players.map(p => ({
       ...p,
       score: newScores[p.id] ?? p.score,
     }));
+
+    // If challenge succeeds (bluff caught), return bluffer's played cards (non-special) to their hand
+    // AND remove them from the discard pile (they were added there when played)
+    let discardPile = state.discardPile;
+    if (challengeSuccess && lastPlay.cards.length > 0) {
+      const nonSpecialCards = lastPlay.cards.filter(c => !c.isSpecial);
+      const returnedIds = new Set(nonSpecialCards.map(c => c.id));
+      discardPile = discardPile.filter(c => !returnedIds.has(c.id));
+      players = players.map(p =>
+        p.id === blufferId
+          ? { ...p, hand: [...p.hand, ...nonSpecialCards], handCount: p.hand.length + nonSpecialCards.length }
+          : p
+      );
+    }
+
+    const myDelta = (newScores['human'] ?? 0) - (scoreMap['human'] ?? 0);
+    // Build deltas array for all affected players
+    const deltasList: Array<{ name: string; delta: number }> = [];
+    state.players.forEach(p => {
+      const d = (newScores[p.id] ?? 0) - (scoreMap[p.id] ?? 0);
+      if (d !== 0) deltasList.push({ name: p.nickname, delta: d });
+    });
+    const resolvedLog = [...state.playLog];
+    if (resolvedLog.length > 0) {
+      resolvedLog[resolvedLog.length - 1] = {
+        ...resolvedLog[resolvedLog.length - 1],
+        challenged: true,
+        challengeSuccess: challengeSuccess,
+        delta: myDelta,
+        deltas: deltasList,
+      };
+    }
 
     const challengerName = state.players.find(p => p.id === challengerId)?.nickname ?? challengerId;
     const blufferName = state.players.find(p => p.id === blufferId)?.nickname ?? blufferId;
 
     let msg: string;
+    const penalty = getComboBonus(lastPlay.declaredType);
+    const tr = t();
+    const typeName = tr.hand_types[lastPlay.declaredType as keyof typeof tr.hand_types] ?? lastPlay.declaredType;
     if (challengeSuccess) {
-      msg = `Challenge success! ${blufferName} was bluffing! ${challengerName} +3, ${blufferName} -2.`;
+      msg = tr.msg_bluff_caught(typeName, `${challengerName}+3 / ${blufferName}-${penalty}`);
     } else {
-      msg = `Challenge failed! ${blufferName} was honest. ${challengerName} -2, ${blufferName} +3.`;
+      msg = tr.msg_bluff_held(typeName, `${challengerName}-2 / ${blufferName}+3`);
     }
 
     const result: ChallengeResult = { success: challengeSuccess, challengerId, blufferId, message: msg };
 
-    set({ players, challengeResult: result, message: msg });
+    // Set timer: 0 to prevent tickTimer from re-triggering during the reveal delay
+    set({ players, discardPile, challengeResult: result, message: msg, playLog: resolvedLog, timer: 0 });
 
     setTimeout(() => get()._afterChallenge(), 2000);
   },
 
   _endRound: () => {
     const state = get();
+    const playLog = [...state.playLog];
+    if (playLog.length > 0 && playLog[playLog.length - 1].challenged === null) {
+      playLog[playLog.length - 1] = { ...playLog[playLog.length - 1], challenged: false };
+    }
 
     const players = state.players.map(p => {
-      const isHandout = p.hand.length === 0;
-      const roundScore = calcRoundScore(p.hand, isHandout);
-      return { ...p, score: p.score + roundScore };
+      const handoutBonus = p.hand.length === 0 ? 5 : 0;
+      return { ...p, score: p.score + handoutBonus };
     });
 
     const winner = players.reduce((a, b) => a.score > b.score ? a : b);
@@ -540,6 +757,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
         gameWinner: gameWinnerPlayer.nickname,
         screen: 'result',
         message: `Game over! ${gameWinnerPlayer.nickname} wins!`,
+        playLog,
       });
       return;
     }
@@ -564,7 +782,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
       selectedCards: [],
       roundWinner: roundWinnerName,
       challengeResult: null,
+      comboAccum: {},
       message: `Round ${nextRound} begins! ${roundWinnerName} won last round. Draw a card.`,
+      playLog,
     });
   },
 }));
